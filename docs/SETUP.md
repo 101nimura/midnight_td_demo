@@ -1,7 +1,7 @@
 # Midnight 開発環境 構築手順書（Windows 版）
 
 Windows 11 の PC で Midnight（Preview ネットワーク）の DApp を開発・実行する環境を、一から作る手順です。
-本プロジェクト（トークン化預金デモ）を動かすところまでを扱います。
+GitHub のリポジトリ（https://github.com/101nimura/midnight_td_demo ）を**クローンして**、トークン化預金デモを動かすところまでを扱います。
 
 - 想定する読者: Windows で開発をしている人。ブロックチェーンの経験は不要です
 - 所要時間: 約 2〜3 時間（ダウンロードと同期の待ち時間を含みます）
@@ -53,14 +53,14 @@ Windows 11 の PC で Midnight（Preview ネットワーク）の DApp を開発
 
 | 章 | 作業 | 目安 |
 |---|---|---|
-| 1 | 事前確認（権限・ネットワーク） | 10 分 |
+| 1 | 事前確認（権限・ネットワーク）、リポジトリのクローン | 15 分 |
 | 2 | WSL2 と Ubuntu | 20 分 |
 | 3 | Node.js（WSL 内） | 10 分 |
 | 4 | Compact コンパイラ（WSL 内） | 10 分 |
 | 5 | Rancher Desktop と Proof Server | 30 分 |
 | 6 | Lace ウォレット（作成 / インポート、アドレスの確認） | 20 分 |
 | 7 | tNIGHT と DUST を用意する | 20〜60 分 |
-| 8 | プロジェクトのセットアップと起動 | 20 分 |
+| 8 | 依存パッケージのインストールと起動 | 20 分 |
 | 9 | 動作確認 | 10 分 |
 
 ---
@@ -77,7 +77,7 @@ Windows 11 の PC で Midnight（Preview ネットワーク）の DApp を開発
 
 ### 1.2 社内ネットワークの確認（重要）
 
-社内のプロキシや **TLS 検査（Netskope / Zscaler など）** がある環境では、Docker コンテナからの HTTPS 通信が失敗します。後の 5.3 で対処するので、先に該当するかどうかを確認しておきます。
+社内のプロキシや **TLS 検査（Netskope / Zscaler など）** がある環境では、Docker コンテナからの HTTPS 通信が失敗します。後の 5.2 で対処するので、先に該当するかどうかを確認しておきます。
 
 PowerShell で次を実行します。
 
@@ -85,14 +85,50 @@ PowerShell で次を実行します。
 Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -like '*netskope*' -or $_.Subject -like '*zscaler*' } | Select-Object Subject
 ```
 
-- 何か表示された → **TLS 検査あり**。5.3 の作業が必要です
-- 何も表示されない → 5.3 は不要です
+- 何か表示された → **TLS 検査あり**。5.2 で社内の証明書を取り込みます
+- 何も表示されない → TLS 検査なし（5.2 は同じ手順で実行します。標準の証明書だけで作成されます）
 
 > Windows 標準の `curl.exe` は、社内環境で証明書の失効確認に失敗することがあります（`CRYPT_E_NO_REVOCATION_CHECK`）。接続確認で使う場合は `--ssl-no-revoke` を付けてください。
 
 ### 1.3 PowerShell と Git Bash の違い
 
 本書のコマンドは **PowerShell** で実行する前提です。Git Bash から `wsl` を実行すると、パスが勝手に書き換えられて失敗します（`/mnt/c/...` が `C:/Program Files/Git/mnt/c/...` になる）。Git Bash を使う場合は、コマンドの先頭に `MSYS_NO_PATHCONV=1` を付けてください。
+
+### 1.4 Git のインストールとリポジトリのクローン
+
+このあとの作業はすべてリポジトリのフォルダで行うので、最初にクローンします。
+
+**① Git for Windows**（`git --version` でバージョンが表示されれば不要）
+
+https://git-scm.com/download/win からインストールします。設定はすべて既定のままで構いません。
+
+**② クローンする**
+
+置き場所は、**空白や日本語を含まず、OneDrive で同期されていないフォルダ**にします（例: `C:\work`）。
+
+```powershell
+mkdir C:\work -Force
+cd C:\work
+git clone https://github.com/101nimura/midnight_td_demo.git
+cd midnight_td_demo
+```
+
+本書では、このフォルダ（例: `C:\work\midnight_td_demo`）を **「リポジトリのフォルダ」** と呼びます。PowerShell のコマンドは、特に断りがなければここで実行します。
+
+> - ダウンロードは約 100MB です（ZK 証明鍵 約 27MB と、単一 HTML 版 約 55MB を含みます）
+> - スクリプト（`*.cmd`）は自分の置き場所を基準に動くので、どのフォルダにクローンしても書き換えは不要です
+
+**③ リポジトリに含まれるもの・含まれないもの**
+
+| 区分 | 内容 | 用意の仕方 |
+|---|---|---|
+| 含まれる | コントラクト（コンパイル済み、ZK 証明鍵を含む）、アプリのソース、スクリプト、ドキュメント、単一 HTML 版 | クローンするだけ（**Compact で再コンパイルする必要はありません**） |
+| 含まれない | `node_modules/`（依存パッケージ） | `npm-install.cmd`（8.1） |
+| 含まれない | `certs/`（Proof Server 用の CA バンドル） | `make-ca-bundle.cmd`（5.2） |
+| 含まれない | `tools/dust/node_modules/`、DUST ツールのシード | `dust-install.cmd`（7.3）。シードは初回の実行時に自動で作られます |
+
+> **改行コードについて**: リポジトリの `.gitattributes` で、WSL で実行する `*.sh` の改行を LF に固定しています。Git for Windows の既定設定（`core.autocrlf=true`）のままクローンして問題ありません。
+> もし WSL のスクリプトで `$'\r': command not found` と出たら、`.gitattributes` が入る前の状態でクローンしています。`git pull` で最新にしてから、`git rm --cached -r .` → `git reset --hard` を実行してください。
 
 ---
 
@@ -103,7 +139,7 @@ Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -like '*netsko
 管理者の PowerShell で実行します。
 
 ```powershell
-wsl --install -d Ubuntu-24.04
+wsl --install -d Ubuntu
 ```
 
 再起動を求められたら再起動します。初回の起動時に、Ubuntu のユーザー名とパスワードを決めます。
@@ -114,9 +150,10 @@ wsl --install -d Ubuntu-24.04
 wsl -l -v
 ```
 
-`Ubuntu-24.04`（または `Ubuntu`）が `VERSION 2` で表示されれば OK です。
+`Ubuntu` が `VERSION 2` で表示されれば OK です（現在の `Ubuntu` は 24.04 LTS です）。
 
-> 本書では、ディストリビューション名を `Ubuntu` として書いています。名前が違う場合は、`wsl -d <名前>` の部分を読み替えてください。
+> スクリプトは、ディストリビューション名を `Ubuntu` として動きます。別の名前（例: `Ubuntu-24.04`）を使う場合は、環境変数 `WSL_DISTRO` にその名前を設定してください。
+> 例: `[Environment]::SetEnvironmentVariable('WSL_DISTRO','Ubuntu-24.04','User')` を実行し、PowerShell を開き直す
 
 ---
 
@@ -180,15 +217,9 @@ docker info
 
 サーバー情報（`Server Version: ...`）が表示されれば OK です。
 
-### 5.2 プロジェクトフォルダを置く
+### 5.2 Proof Server 用の CA バンドルを作る（全員）
 
-本プロジェクトのフォルダを `C:\Users\<ユーザー名>\midnight_demo` に置きます（共有フォルダや Git から取得します）。
-
-> スクリプトの多くは `C:\Users\ynimura\midnight_demo` を前提に書かれています。ユーザー名やフォルダの場所が違う場合は、`*.cmd` と `.tools/*.sh` の中のパスを置き換えてください。
-
-### 5.3 TLS 検査がある環境の準備（1.2 で該当した場合のみ）
-
-Proof Server は起動時に、証明用のパラメータを **Amazon S3 からダウンロード**します。TLS 検査の証明書をコンテナが信頼していないと、ダウンロードに失敗して停止します。
+Proof Server は起動時に、証明用のパラメータを **Amazon S3 からダウンロード**します。社内に TLS 検査があると、コンテナがその証明書を信頼できず、ダウンロードに失敗して停止します。
 
 失敗したときのログ:
 ```
@@ -196,22 +227,21 @@ WARN midnight_base_crypto::data_provider: error sending request for url (https:/
 Error: ... Failed to fetch data from https://midnight-s3-fileshare-dev-eu-west-1... after 3 attempts. Giving up.
 ```
 
-対処として、社内のルート証明書を含む CA バンドルを作ります。プロジェクトフォルダで実行します。
+これを防ぐため、コンテナに渡す CA バンドルを作ります。**TLS 検査の有無にかかわらず実行してください。** `proof-server.yml` がこのファイルを必ず読み込むためです。TLS 検査がない環境では、標準の証明書だけで作られます。
+
+リポジトリのフォルダで実行します。
 
 ```powershell
-cd C:\Users\<ユーザー名>\midnight_demo
 .\make-ca-bundle.cmd
 ```
 
-`certs\netskope.pem` と `certs\ca-bundle.crt` ができます。Zscaler など Netskope 以外の製品の場合は、`.tools\make-ca-bundle.ps1 -Pattern '*zscaler*'` のように名前を指定してください。
+`certs\ca-bundle.crt` ができれば OK です。社内のルート証明書が見つかった場合は、`certs\netskope.pem` にも書き出されます。Zscaler など Netskope 以外の製品の場合は、`.tools\make-ca-bundle.ps1 -Pattern '*zscaler*'` のように製品名を指定してください。
 
-> TLS 検査がない環境でも、`proof-server.yml` は `certs/ca-bundle.crt` をマウントします。その場合は、WSL の標準 CA をコピーしておきます。
-> `wsl -d Ubuntu -- bash -c "mkdir -p /mnt/c/Users/<ユーザー名>/midnight_demo/certs && cp /etc/ssl/certs/ca-certificates.crt /mnt/c/Users/<ユーザー名>/midnight_demo/certs/ca-bundle.crt"`
+### 5.3 Proof Server の起動
 
-### 5.4 Proof Server の起動
+リポジトリのフォルダで実行します。
 
 ```powershell
-cd C:\Users\<ユーザー名>\midnight_demo
 docker compose -f proof-server.yml up -d
 docker compose -f proof-server.yml logs -f     # 確認したら Ctrl+C で抜ける
 ```
@@ -273,7 +303,7 @@ Chrome Web Store（または Edge アドオン）で **「Lace」**（提供元:
 | 選択肢 | 説明 |
 |---|---|
 | このアプリで実行（WASM） | ブラウザの中で証明を作ります。Docker は不要ですが、メモリが足りないと Lace が落ちることがあります |
-| **カスタムプルーフサーバー（推奨）** | 5.4 で起動した Proof Server を使います。安定しています |
+| **カスタムプルーフサーバー（推奨）** | 5.3 で起動した Proof Server を使います。安定しています |
 
 > この画面の「ノードアドレス」「インデクサーアドレス」は、Lace が使う接続先です（構築時点では Blockfrost のエンドポイントでした）。デモアプリは Lace から接続先を受け取って使うので、変更する必要はありません。
 
@@ -299,7 +329,7 @@ Midnight のウォレットには 3 種類のアドレスがあります。こ�
 ### 7.1 tNIGHT を受け取る
 
 1. Lace の unshielded アドレス（`mn_addr_preview1…`）をコピーします（6.5）
-2. **ブラウザで** Preview の Faucet のページを開きます（URL は Midnight の公式ドキュメントで最新のものを確認してください）
+2. **ブラウザで** Preview の公式 Faucet を開きます: **https://faucet.preview.midnight.network/**
 3. アドレスを貼り付けて請求します
 4. 数分後、Lace のトークン一覧に **tNIGHT** が表示されます
 
@@ -319,7 +349,7 @@ Lace の **トークン → 「Generate tDUST」**（「DUST を生成」など�
 
 Midnight では、**NIGHT を持つウォレットが、DUST を別のウォレットの DUST アドレス宛てに生成させる**こと（designation）ができます。これを使い、ツール専用のウォレットの tNIGHT から、Lace 宛てに DUST を生成させます。
 
-1. **事前条件**: Proof Server が起動していること（5.4）
+1. **事前条件**: Proof Server が起動していること（5.3）
 2. ツールをインストールします（初回のみ。数分かかります）
    ```powershell
    .\dust-install.cmd
@@ -349,19 +379,21 @@ Midnight では、**NIGHT を持つウォレットが、DUST を別のウォレ�
 
 ### 8.1 依存パッケージのインストール
 
+リポジトリのフォルダで実行します。
+
 ```powershell
-cd C:\Users\<ユーザー名>\midnight_demo
-wsl -d Ubuntu -- bash /mnt/c/Users/<ユーザー名>/midnight_demo/.tools/npm.sh install
+.\npm-install.cmd
 ```
 
 数分かかります（Windows 側のフォルダに WSL からアクセスするため、Linux 内で実行するより遅くなります）。
 
-### 8.2 コントラクトのコンパイルとテスト
+### 8.2 テスト
 
 ```powershell
-.\compile-contract.cmd   # ZK 鍵の生成を含む。数分かかる（生成済みならスキップしてよい）
 .\run-tests.cmd          # 「9 passed」と出れば OK
 ```
+
+コンパイル済みのコントラクト（ZK 証明鍵を含む）はリポジトリに入っているので、**コンパイルは不要**です。`contract/tdeposit.compact` を変更したときだけ `.\compile-contract.cmd` を実行します（数分かかります）。
 
 ### 8.3 開発サーバーの起動
 
@@ -400,8 +432,8 @@ wsl -d Ubuntu -- bash /mnt/c/Users/<ユーザー名>/midnight_demo/.tools/npm.sh
 
 | # | 確認項目 | 期待する結果 |
 |---|---|---|
-| 1 | `wsl -d Ubuntu -- bash -lc "node -v"` | v24.x |
-| 2 | WSL で `compact compile --version` | 0.31.1 |
+| 1 | リポジトリのフォルダで `wsl -d Ubuntu --cd . -- bash -c ". .tools/env.sh && node -v"` | v24.x |
+| 2 | リポジトリのフォルダで `wsl -d Ubuntu --cd . -- bash -c ". .tools/env.sh && compact compile --version"` | 0.31.1 |
 | 3 | `docker info` | エラーが出ない |
 | 4 | http://localhost:6300/version | 8.0.3 |
 | 5 | `run-tests.cmd` | 9 passed |
@@ -420,7 +452,7 @@ wsl -d Ubuntu -- bash /mnt/c/Users/<ユーザー名>/midnight_demo/.tools/npm.sh
 | `compact` で NTFS 圧縮の結果のような出力が出る | Windows の `compact.exe` が動いている | WSL の中で実行する |
 | `checkRuntimeVersion` のエラー | Compact のバージョン違い | `compact update 0.31.1` → コンパイルし直す |
 | `//./pipe/docker_engine` エラー | Rancher Desktop が起動しきっていない | Running になるまで待つ |
-| Proof Server がすぐ止まる（S3 からのダウンロードに失敗） | 社内の TLS 検査 | 5.3 の CA バンドルを作ってから起動し直す |
+| Proof Server がすぐ止まる（S3 からのダウンロードに失敗） | 社内の TLS 検査 | 5.2 の CA バンドルを作ってから起動し直す |
 | 「Lace ウォレットが見つかりません」 | 拡張機能が無効 / `file://` でファイル URL へのアクセスが OFF | 拡張機能を有効にする / 許可を ON にする / http で開く |
 | Generate tDUST が見つからない | Lace のバージョンによる UI の違い | 7.3 の代替ツールを使う |
 | DUST がずっと 0 | 登録していない / 登録直後 | 7.2 / 7.3。登録後に数分〜十数分待つ |
@@ -450,7 +482,9 @@ wsl -d Ubuntu -- bash /mnt/c/Users/<ユーザー名>/midnight_demo/.tools/npm.sh
 | Indexer（GraphQL） | https://indexer.preview.midnight.network/api/v4/graphql |
 | Indexer（WebSocket） | wss://indexer.preview.midnight.network/api/v4/graphql/ws |
 | Node（RPC） | https://rpc.preview.midnight.network |
-| Faucet API（DUST ツールが使用） | https://midnight-tmnight-preview.nethermind.dev/ |
+| **公式 Faucet（ブラウザで使う）** | **https://faucet.preview.midnight.network/** |
+| Faucet API（DUST ツールが内部で使用） | https://midnight-tmnight-preview.nethermind.dev/ |
 | Proof Server（ローカル） | http://localhost:6300 |
+| リポジトリ | https://github.com/101nimura/midnight_td_demo |
 
 デモアプリは、接続先を Lace の設定（`getConfiguration()`）から受け取ります。

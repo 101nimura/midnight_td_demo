@@ -202,8 +202,9 @@ rect(s, Inches(0.8), Inches(3.55), Inches(1.4), Inches(0.08), BLUE)
 textbox(s, Inches(0.8), Inches(1.7), Inches(11.5), Inches(1.0), ["Midnight 開発環境 構築手順書"], size=44, color=WHITE, bold_first=True)
 textbox(s, Inches(0.8), Inches(2.65), Inches(11.5), Inches(0.8), ["Windows 11 × WSL2 × Rancher Desktop × Lace（Preview ネットワーク）"], size=22, color=RGBColor(0xA9, 0xB6, 0xD6))
 textbox(s, Inches(0.8), Inches(3.9), Inches(11.5), Inches(1.8), [
-    "対象: トークン化預金デモ（midnight_demo）を動かせる環境を、一から作る",
-    "範囲: WSL / Node.js / Compact / Proof Server / Lace（作成・インポート・アドレス）/ tNIGHT・DUST / アプリの起動",
+    "対象: トークン化預金デモ（midnight_td_demo）を動かせる環境を、一から作る",
+    "前提: リポジトリ https://github.com/101nimura/midnight_td_demo をクローンして使う",
+    "範囲: クローン / WSL / Node.js / Compact / Proof Server / Lace（作成・インポート・アドレス）/ tNIGHT・DUST / 起動",
     "所要時間: 約 2〜3 時間（ダウンロード・同期の待ち時間を含む）",
 ], size=16, color=WHITE)
 textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: docs/SETUP.md　／　デモの操作: README.md　／　課題: docs/ISSUES.md"], size=12, color=RGBColor(0x8F, 0x9B, 0xB8))
@@ -212,7 +213,7 @@ textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: doc
 s = new_slide("この手順書のポイント", "はじめに")
 textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["実際に構築したときのつまずきを踏まえ、「つまずかない順序」で並べています。順番どおりに進めてください。"], size=17)
 pts = [
-    ("ビルドは WSL2 で", "Compact は Linux 版のみ。Windows 側の古い Node.js の影響も避けられる"),
+    ("クローンして使う", "スクリプトは置き場所を自動判定。改行コードは .gitattributes で固定済み"),
     ("バージョンを固定", "Compact 0.31.1 / midnight-js 4.1.1 / Proof Server 8.0.3 の組み合わせ"),
     ("Docker は「Running」を待つ", "起動しきる前の操作は docker_engine エラーになる"),
     ("社内 TLS 検査に先に対処", "Netskope 等があると Proof Server が起動直後に停止する"),
@@ -288,7 +289,7 @@ table(s, Inches(0.6), Inches(1.4), Inches(12.1), [
 
 # 6. 作業の流れ
 s = new_slide("0. 作業の流れ", "全体像")
-steps = [("1", "事前|確認", "10分"), ("2", "WSL2", "20分"), ("3", "Node.js", "10分"), ("4", "Compact", "10分"), ("5", "Docker|Proof|Server", "30分"),
+steps = [("1", "事前確認|クローン", "15分"), ("2", "WSL2", "20分"), ("3", "Node.js", "10分"), ("4", "Compact", "10分"), ("5", "Docker|Proof|Server", "30分"),
          ("6", "Lace", "20分"), ("7", "tNIGHT|DUST", "20〜60分"), ("8", "アプリ|起動", "20分"), ("9", "動作|確認", "10分")]
 for i, (n, name, t) in enumerate(steps):
     x = Inches(0.5) + i * Inches(1.39)
@@ -325,18 +326,41 @@ code(s, Inches(6.6), Inches(1.9), Inches(6.2), Inches(1.3), [
 ], size=13)
 table(s, Inches(6.6), Inches(3.4), Inches(6.2), [
     ["結果", "対応"],
-    ["何か表示された", "TLS 検査あり → 5.3 の作業が必要"],
-    ["何も表示されない", "5.3 は不要"],
+    ["何か表示された", "TLS 検査あり → 5.2 で社内証明書を取り込む"],
+    ["何も表示されない", "TLS 検査なし（5.2 は同じ手順で実行）"],
 ], col_w=[2.2, 4.0], size=13)
 callout(s, Inches(6.6), Inches(4.9), Inches(6.2), Inches(1.3), "Windows の curl.exe での接続確認", ["社内環境では証明書の失効確認に失敗することがある（CRYPT_E_NO_REVOCATION_CHECK）→ --ssl-no-revoke を付ける"])
+
+# 7b. クローン
+s = new_slide("1.4 Git のインストールとリポジトリのクローン", "1. 事前確認")
+textbox(s, Inches(0.6), Inches(1.25), Inches(12), Inches(0.5), ["Git for Windows（https://git-scm.com/download/win、設定は既定のまま）を入れ、空白・日本語・OneDrive を含まないフォルダにクローンする。"], size=15)
+code(s, Inches(0.6), Inches(1.85), Inches(6.3), Inches(1.75), [
+    "mkdir C:\\work -Force",
+    "cd C:\\work",
+    "git clone https://github.com/101nimura/midnight_td_demo.git",
+    "cd midnight_td_demo     # = リポジトリのフォルダ",
+], size=13)
+textbox(s, Inches(7.2), Inches(1.85), Inches(5.5), Inches(1.8), [
+    "・ダウンロードは約 100MB（ZK 証明鍵・単一 HTML を含む）",
+    "・以降の PowerShell コマンドはリポジトリのフォルダで実行",
+    "・*.cmd は自分の場所を基準に動く → どこに置いても書き換え不要",
+], size=14)
+table(s, Inches(0.6), Inches(3.85), Inches(12.1), [
+    ["区分", "内容", "用意の仕方"],
+    ["含まれる", "コンパイル済みコントラクト（ZK 鍵込み）・ソース・スクリプト・docs・単一 HTML", "クローンのみ（再コンパイル不要）"],
+    ["含まれない", "node_modules/", "npm-install.cmd（8.1）"],
+    ["含まれない", "certs/（Proof Server 用 CA バンドル）", "make-ca-bundle.cmd（5.2）"],
+    ["含まれない", "tools/dust/node_modules/・DUST ツールのシード", "dust-install.cmd（7.3）・シードは自動作成"],
+], col_w=[1.6, 6.2, 4.3], size=13, row_h=Inches(0.48))
+callout(s, Inches(0.6), Inches(6.35), Inches(12.1), Inches(0.6), "改行コード: *.sh は .gitattributes で LF に固定。$'\\r': command not found が出たら git pull → git rm --cached -r . → git reset --hard", [], size=12)
 
 # 8. WSL
 s = new_slide("2. WSL2 と Ubuntu", "2. WSL2")
 textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5), [("管理者の PowerShell で実行", {"bold": True, "size": 18})])
-code(s, Inches(0.6), Inches(1.9), Inches(12.1), Inches(1.0), ["wsl --install -d Ubuntu-24.04", "# 再起動後、Ubuntu のユーザー名・パスワードを設定"], size=15)
+code(s, Inches(0.6), Inches(1.9), Inches(12.1), Inches(1.0), ["wsl --install -d Ubuntu", "# 再起動後、Ubuntu のユーザー名・パスワードを設定（Ubuntu = 24.04 LTS）"], size=15)
 textbox(s, Inches(0.6), Inches(3.2), Inches(12), Inches(0.5), [("確認", {"bold": True, "size": 18})])
 code(s, Inches(0.6), Inches(3.8), Inches(12.1), Inches(1.4), ["wsl -l -v", "#   NAME            STATE      VERSION", "# * Ubuntu          Running    2      ← VERSION 2 なら OK"], size=15)
-callout(s, Inches(0.6), Inches(5.55), Inches(12.1), Inches(1.0), "ディストリビューション名", ["本書・スクリプトは名前を「Ubuntu」としています。違う場合は wsl -d <名前> を読み替えてください。"], kind="ok")
+callout(s, Inches(0.6), Inches(5.55), Inches(12.1), Inches(1.0), "ディストリビューション名", ["スクリプトは「Ubuntu」で動く。別名（例: Ubuntu-24.04）なら環境変数 WSL_DISTRO に設定する。"], kind="ok")
 
 # 9. Node
 s = new_slide("3. Node.js（WSL 内）", "3. Node.js")
@@ -392,7 +416,7 @@ callout(s, Inches(7.2), Inches(1.3), Inches(5.5), Inches(3.0), "起動しきる�
 callout(s, Inches(7.2), Inches(4.6), Inches(5.5), Inches(1.6), "PC を再起動したあと", ["Rancher Desktop が Running → Proof Server 起動、の順番を毎回守る。"], kind="ok")
 
 # 12. TLS
-s = new_slide("5.3 社内 TLS 検査がある場合の準備", "5. Docker")
+s = new_slide("5.2 Proof Server 用の CA バンドルを作る（全員）", "5. Docker")
 textbox(s, Inches(0.6), Inches(1.25), Inches(12), Inches(0.5), ["Proof Server は起動時に S3 からパラメータを取得する。社内証明書をコンテナが信頼できないと失敗して停止する。"], size=15)
 steps3 = [("Windows 証明書ストア", "社内ルート証明書\n（Netskope 等）"), ("make-ca-bundle.cmd", "PEM に書き出し\n標準 CA と結合"), ("certs\\ca-bundle.crt", "CA バンドル"), ("proof-server.yml", "コンテナにマウント\nSSL_CERT_FILE")]
 for i, (h, d) in enumerate(steps3):
@@ -401,14 +425,14 @@ for i, (h, d) in enumerate(steps3):
     shape_text(b, [h] + d.split("\n"), 14, bold=True)
     if i < 3:
         arrow(s, x + Inches(2.7), Inches(2.4), Inches(0.4), Inches(0.4))
-code(s, Inches(0.6), Inches(3.6), Inches(6.2), Inches(1.3), ["cd C:\\Users\\<ユーザー名>\\midnight_demo", ".\\make-ca-bundle.cmd", "# Zscaler 等: .tools\\make-ca-bundle.ps1 -Pattern '*zscaler*'"], size=13)
+code(s, Inches(0.6), Inches(3.6), Inches(6.2), Inches(1.3), ["# リポジトリのフォルダで", ".\\make-ca-bundle.cmd", "# Zscaler 等: .tools\\make-ca-bundle.ps1 -Pattern '*zscaler*'"], size=13)
 code(s, Inches(7.1), Inches(3.6), Inches(5.6), Inches(1.3), ["# 失敗時のログ（例）", "Failed to fetch data from https://midnight-s3-", "fileshare-dev-eu-west-1... after 3 attempts."], size=12)
-callout(s, Inches(0.6), Inches(5.2), Inches(12.1), Inches(1.3), "TLS 検査がない環境", ["proof-server.yml は certs/ca-bundle.crt を必ずマウントするので、WSL の標準 CA（/etc/ssl/certs/ca-certificates.crt）を certs\\ca-bundle.crt にコピーしておく。"], kind="ok")
+callout(s, Inches(0.6), Inches(5.2), Inches(12.1), Inches(1.3), "TLS 検査がない環境でも実行する", ["proof-server.yml は certs/ca-bundle.crt を必ず読み込む。社内証明書が無ければ標準 CA のみで作成される。"], kind="ok")
 
 # 13. Proof server
-s = new_slide("5.4 Proof Server の起動と確認", "5. Docker")
+s = new_slide("5.3 Proof Server の起動と確認", "5. Docker")
 code(s, Inches(0.6), Inches(1.35), Inches(7.2), Inches(1.6), [
-    "cd C:\\Users\\<ユーザー名>\\midnight_demo",
+    "# リポジトリのフォルダで",
     "docker compose -f proof-server.yml up -d",
     "docker compose -f proof-server.yml logs -f   # Ctrl+C で抜ける",
 ], size=14)
@@ -425,7 +449,7 @@ textbox(s, Inches(8.45), Inches(1.5), Inches(4.1), Inches(2.4), [
     ("http://localhost:6300/version", {"size": 16, "font": MONO, "bold": True}),
     ("表示が 8.0.3 なら OK", {"size": 16, "bold": True, "color": RGBColor(0x1E, 0x8E, 0x55)}),
 ])
-callout(s, Inches(8.2), Inches(4.25), Inches(4.5), Inches(1.9), "すぐ止まる場合", ["docker ps に出てこない → 5.3（TLS 検査）を確認。", "ログに S3 のエラーが出ているはず。"])
+callout(s, Inches(8.2), Inches(4.25), Inches(4.5), Inches(1.9), "すぐ止まる場合", ["docker ps に出てこない → 5.2（CA バンドル）を確認。", "ログに S3 のエラーが出ているはず。"])
 
 # 14. Lace install & wallet
 s = new_slide("6.1〜6.2 Lace のインストールとウォレットの用意", "6. Lace")
@@ -479,7 +503,7 @@ textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(1.5), [
 table(s, Inches(4.6), Inches(3.1), Inches(8.1), [
     ["選択肢", "説明"],
     ["このアプリで実行（WASM）", "ブラウザ内で証明。Docker 不要だが、メモリ不足で Lace が落ちることがある"],
-    ["カスタムプルーフサーバー（推奨）", "5.4 の Proof Server を使用。安定"],
+    ["カスタムプルーフサーバー（推奨）", "5.3 の Proof Server を使用。安定"],
 ], col_w=[3.0, 5.1], size=13, row_h=Inches(0.6))
 callout(s, Inches(4.6), Inches(5.2), Inches(8.1), Inches(1.3), "ノード / インデクサーのアドレス", ["Lace が使う接続先（構築時は Blockfrost）。デモアプリは Lace から受け取って使うので変更不要。"], kind="ok")
 
@@ -523,7 +547,7 @@ picture(s, IMG / "lace-tnight-activity.png", Inches(0.6), Inches(1.25), Inches(3
 textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(3.0), [
     ("手順", {"bold": True, "size": 18}),
     "1. Lace の unshielded アドレス（mn_addr_preview1…）をコピー",
-    "2. ブラウザで Preview の Faucet を開く（URL は公式ドキュメントで最新を確認）",
+    ("2. ブラウザで公式 Faucet を開く: https://faucet.preview.midnight.network/", {"bold": True}),
     "3. アドレスを貼り付けて請求",
     "4. 数分後、Lace に tNIGHT が表示される（左図: 5,000 tNIGHT の着金）",
 ], size=16)
@@ -557,7 +581,7 @@ for i, (h, d) in enumerate(fl):
     if i < 2:
         arrow(s, x + Inches(3.67), Inches(1.8), Inches(0.42), Inches(0.4))
 code(s, Inches(0.6), Inches(2.95), Inches(6.3), Inches(1.5), [
-    "# 事前: Proof Server を起動（5.4）／ 初回のみ install",
+    "# 事前: Proof Server を起動（5.3）／ 初回のみ install",
     ".\\dust-install.cmd",
     "# 引数 = Lace の DUST アドレス",
     ".\\dust-designate.cmd mn_dust_preview1...",
@@ -578,17 +602,14 @@ callout(s, Inches(0.6), Inches(4.65), Inches(6.3), Inches(1.85), "同期が止�
 ])
 
 # 22. Project setup
-s = new_slide("8.1〜8.2 プロジェクトのセットアップ", "8. アプリ")
-code(s, Inches(0.6), Inches(1.35), Inches(12.1), Inches(2.6), [
-    "cd C:\\Users\\<ユーザー名>\\midnight_demo",
-    "# 依存パッケージ（数分）",
-    "wsl -d Ubuntu -- bash /mnt/c/Users/<ユーザー名>/midnight_demo/.tools/npm.sh install",
-    "# コントラクトのコンパイル（ZK 鍵の生成込み。生成済みならスキップ可）",
-    ".\\compile-contract.cmd",
+s = new_slide("8.1〜8.2 依存パッケージのインストールとテスト", "8. アプリ")
+code(s, Inches(0.6), Inches(1.35), Inches(12.1), Inches(1.9), [
+    "# リポジトリのフォルダで",
+    ".\\npm-install.cmd      # 依存パッケージ（数分）",
     ".\\run-tests.cmd        # 9 passed なら OK",
-], size=14)
-callout(s, Inches(0.6), Inches(4.3), Inches(12.1), Inches(1.3), "フォルダの場所", ["スクリプトは C:\\Users\\ynimura\\midnight_demo を前提にしている。ユーザー名・場所が違う場合は *.cmd と .tools/*.sh のパスを置き換える。"])
-callout(s, Inches(0.6), Inches(5.85), Inches(12.1), Inches(0.9), "インストールが遅い", ["Windows 側のフォルダに WSL からアクセスするため。故障ではない。"], kind="ok")
+], size=15)
+callout(s, Inches(0.6), Inches(3.6), Inches(12.1), Inches(1.3), "コンパイルは不要", ["コンパイル済みのコントラクト（ZK 証明鍵を含む）はリポジトリに入っている。tdeposit.compact を変更したときだけ .\\compile-contract.cmd（数分）。"], kind="ok")
+callout(s, Inches(0.6), Inches(5.15), Inches(12.1), Inches(1.3), "インストールが遅い", ["Windows 側のフォルダに WSL からアクセスするため。故障ではない。"], kind="ok")
 
 # 23. Start & connect
 s = new_slide("8.3〜8.4 起動して Lace に接続する", "8. アプリ")
@@ -623,8 +644,8 @@ callout(s, Inches(0.6), Inches(5.0), Inches(12.1), Inches(1.5), "開いた URL �
 s = new_slide("9. 動作確認チェックリスト", "9. 確認")
 table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
     ["#", "確認項目", "期待する結果"],
-    ["1", "wsl -d Ubuntu -- bash -lc \"node -v\"", "v24.x"],
-    ["2", "WSL で compact compile --version", "0.31.1"],
+    ["1", "wsl -d Ubuntu --cd . -- bash -c \". .tools/env.sh && node -v\"", "v24.x"],
+    ["2", "wsl -d Ubuntu --cd . -- bash -c \". .tools/env.sh && compact compile --version\"", "0.31.1"],
     ["3", "docker info", "エラーが出ない"],
     ["4", "http://localhost:6300/version", "8.0.3"],
     ["5", "run-tests.cmd", "9 passed"],
@@ -642,6 +663,7 @@ trouble = [
     ["//./pipe/docker_engine エラー", "Rancher Desktop 起動中", "Running まで待つ"],
     ["Proof Server がすぐ止まる", "社内 TLS 検査", "make-ca-bundle.cmd → 再起動"],
     ["Lace ウォレットが見つかりません", "拡張無効 / file:// の許可 OFF", "有効化 / 許可 ON / http で開く"],
+    ["$'\\r': command not found", "古い状態でクローン（改行 CRLF）", "git pull → git rm --cached -r . → git reset --hard"],
 ]
 trouble2 = [
     ["症状", "原因", "対処"],
@@ -654,7 +676,7 @@ trouble2 = [
 ]
 for i, rows in enumerate([trouble, trouble2]):
     s = new_slide(f"10. トラブルシューティング（{i + 1}/2）", "10. トラブル")
-    table(s, Inches(0.6), Inches(1.35), Inches(12.1), rows, col_w=[4.3, 3.4, 4.4], size=14, row_h=Inches(0.72))
+    table(s, Inches(0.6), Inches(1.35), Inches(12.1), rows, col_w=[4.3, 3.4, 4.4], size=14, row_h=Inches(0.66))
 
 # 28. 付録
 s = new_slide("付録. バージョンと接続先", "付録")
@@ -673,10 +695,12 @@ table(s, Inches(6.8), Inches(1.35), Inches(5.9), [
     ["用途", "URL"],
     ["Indexer", "`https://indexer.preview.midnight.network/api/v4/graphql"],
     ["Node（RPC）", "`https://rpc.preview.midnight.network"],
-    ["Faucet API", "`https://midnight-tmnight-preview.nethermind.dev/"],
+    ["公式 Faucet", "`https://faucet.preview.midnight.network/"],
+    ["Faucet API（ツール用）", "`https://midnight-tmnight-preview.nethermind.dev/"],
+    ["リポジトリ", "`https://github.com/101nimura/midnight_td_demo"],
     ["Proof Server", "`http://localhost:6300"],
-], col_w=[1.6, 4.3], size=12, row_h=Inches(0.7))
-callout(s, Inches(6.8), Inches(5.1), Inches(5.9), Inches(1.4), "デモアプリの接続先", ["Lace の設定（getConfiguration）から受け取る。Lace 側の設定が優先される。"], kind="ok")
+], col_w=[1.6, 4.3], size=12, row_h=Inches(0.55))
+callout(s, Inches(6.8), Inches(5.45), Inches(5.9), Inches(1.2), "デモアプリの接続先", ["Lace の設定（getConfiguration）から受け取る。Lace 側の設定が優先される。"], kind="ok")
 
 prs.save(OUT)
 print(f"saved {OUT} ({page['n']} slides)")

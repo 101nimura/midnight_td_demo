@@ -1,3 +1,3 @@
-. /mnt/c/Users/ynimura/midnight_demo/.tools/env.sh
-cd /mnt/c/Users/ynimura/midnight_demo/tools/dust
-npm "$@"
+# DUST 代替ツール（tools/dust）で npm を実行する
+. "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+cd "$REPO_ROOT/tools/dust" && npm "$@"

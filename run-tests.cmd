@@ -1,3 +1,6 @@
 @echo off
+chcp 65001 >nul
 REM コントラクトのローカルシミュレータテスト
-wsl -d Ubuntu -- bash /mnt/c/Users/ynimura/midnight_demo/.tools/npm.sh test
+setlocal
+if not defined WSL_DISTRO set "WSL_DISTRO=Ubuntu"
+wsl -d %WSL_DISTRO% --cd "%~dp0." -- bash .tools/npm.sh test

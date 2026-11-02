@@ -1,3 +1,3 @@
-. /mnt/c/Users/ynimura/midnight_demo/.tools/env.sh
-cd /mnt/c/Users/ynimura/midnight_demo
-npm "$@"
+# リポジトリのルートで npm を実行する（例: bash .tools/npm.sh run dev）
+. "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+cd "$REPO_ROOT" && npm "$@"

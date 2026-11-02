@@ -11,6 +11,8 @@ Midnight ブロックチェーン上で、銀行が発行する **トークン�
 | フロントエンド | React + Vite + midnight-js 4.1.1 |
 | 提供形態 | ① 開発サーバー版（`start-dev.cmd`） ② 単一 HTML 版（`dist-single/tdeposit-demo.html`） |
 
+取得: `git clone https://github.com/101nimura/midnight_td_demo.git`（環境構築は SETUP.md を参照）
+
 関連ドキュメント
 
 - 環境を一から作る手順: [`docs/SETUP.md`](docs/SETUP.md)（スライド版: `docs/SETUP.pptx`）
@@ -65,11 +67,11 @@ Midnight ブロックチェーン上で、銀行が発行する **トークン�
 Proof Server が起動していない場合:
 
 ```powershell
-cd C:\Users\ynimura\midnight_demo
+# リポジトリのフォルダ（例: C:\work\midnight_td_demo）で実行
 docker compose -f proof-server.yml up -d
 ```
 
-> 社内の TLS 検査（Netskope）環境では、`certs\ca-bundle.crt` がないと Proof Server が起動直後に停止します。手順は SETUP.md の「5.3」を参照してください。
+> `certs\ca-bundle.crt` がないと、Proof Server は起動できません（社内の TLS 検査がある環境では、起動直後に停止します）。クローンした直後は `make-ca-bundle.cmd` を一度実行してください（SETUP.md の 5.2）。
 
 ---
 
@@ -81,11 +83,13 @@ docker compose -f proof-server.yml up -d
 start-dev.cmd
 ```
 
-PowerShell から直接実行する場合:
+PowerShell から直接実行する場合（リポジトリのフォルダで）:
 
 ```powershell
-wsl -d Ubuntu -- bash /mnt/c/Users/ynimura/midnight_demo/.tools/npm.sh run dev
+wsl -d Ubuntu --cd . -- bash .tools/npm.sh run dev
 ```
+
+> 初めて起動する前に、`npm-install.cmd` で依存パッケージを入れておきます（SETUP.md の 8.1）。
 
 `Local: http://localhost:5173/` と表示されたら、Chrome / Edge で **http://localhost:5173** を開きます。
 
@@ -250,7 +254,7 @@ start-single.cmd
 | 「ネットワーク (…) が preview ではありません」 | Lace のネットワークが違う | Lace の設定で Preview を選ぶ |
 | 右上の DUST が 0 | DUST を生成していない / 生成直後でまだたまっていない | SETUP.md の「7.」。生成後、数分〜十数分待って「再取得」を押す |
 | デプロイ・操作が長時間止まる、証明のエラー | Proof Server が動いていない | http://localhost:6300/version を確認。止まっていれば `docker compose -f proof-server.yml up -d` |
-| Proof Server がすぐ止まる（`docker ps` に出ない） | 社内 TLS 検査で、起動時のダウンロードに失敗している | `make-ca-bundle.cmd` を実行してから起動し直す（SETUP.md 5.3） |
+| Proof Server がすぐ止まる（`docker ps` に出ない） | 社内 TLS 検査で、起動時のダウンロードに失敗している | `make-ca-bundle.cmd` を実行してから起動し直す（SETUP.md 5.2） |
 | `docker` が `//./pipe/docker_engine` エラーになる | Rancher Desktop が起動しきっていない | 「Running」になるまで待つ |
 | `発行体（銀行）のみ実行できます` | 操作者が銀行ではない / 別のブラウザで作った銀行の口座鍵 | 操作者を銀行に切り替える / デプロイしたブラウザで操作する |
 | `未登録の口座です` / `残高不足です` / `凍結されています` / `システム停止中です` | 業務ルールのチェック（正常な動作） | 状態を直してから再実行する |
@@ -284,11 +288,12 @@ docs/                       SETUP（環境構築）/ ISSUES（課題）/ images
 
 | コマンド | 内容 |
 |---|---|
+| `npm-install.cmd` | 依存パッケージのインストール（クローン直後・package.json 更新時） |
 | `start-dev.cmd` | 開発サーバー版を起動（http://localhost:5173） |
 | `build-single.cmd` / `start-single.cmd` | 単一 HTML 版のビルド / 配信（http://localhost:8080） |
-| `compile-contract.cmd` | コントラクトのコンパイル（ZK 鍵の生成を含む。数分かかる） |
+| `compile-contract.cmd` | コントラクトのコンパイル（`tdeposit.compact` を変更したときのみ。ZK 鍵の生成を含み数分かかる） |
 | `run-tests.cmd` | コントラクトのシミュレータテスト |
-| `make-ca-bundle.cmd` | 社内 TLS 検査環境向けの CA バンドルを作成 |
+| `make-ca-bundle.cmd` | Proof Server 用の CA バンドルを作成（クローン直後に 1 回。社内 TLS 検査があれば社内証明書も取り込む） |
 | `dust-install.cmd` / `dust-designate.cmd <DUSTアドレス>` | DUST 代替ツールのインストール / 実行 |
 
 ---
