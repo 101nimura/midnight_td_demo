@@ -1,0 +1,30 @@
+
+> start
+> tsx designate.ts --fund-only
+
+[16:48:05.229] [32mINFO[39m (3883): [36mInitializing wallet builder for preview[39m
+[16:48:05.304] [32mINFO[39m (3883): [36mCreating dust wallet with params: {"indexerClientConnection":{"indexerHttpUrl":"https://indexer.preview.midnight.network/api/v4/graphql","indexerWsUrl":"wss://indexer.preview.midnight.network/api/v4/graphql/ws"},"provingServerUrl":"http://localhost:6300/","networkId":"preview","relayURL":"wss://rpc.preview.midnight.network/","txHistoryStorage":{"storage":{}},"costParameters":{"ledgerParams":{"__wbg_ptr":4654560},"additionalFeeOverhead":"1000","feeBlocksMargin":5}}[39m
+[07:48:05] INFO: 入金のみモード（DUST 登録は行いません）
+[07:48:05] INFO: 保存済みのデモ専用ウォレットを使用します
+[07:48:05] INFO: デモ専用ウォレットの tNIGHT アドレス: mn_addr_preview159ph4rd4lnfw0nlddh9p9elfjf7rr7aypaw4u548m6etj4ra8q0q7r95kz
+[07:48:05] INFO: ウォレットを同期中…（数分かかることがあります）
+2026-11-02 16:48:08        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
+2026-11-02 16:48:08        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
+[08:00:49] INFO: tNIGHT 残高が 0 のため Faucet に請求します…
+[08:00:49] INFO: Requesting tokens from 'https://midnight-tmnight-preview.nethermind.dev/' for address: 'mn_addr_preview159ph4rd4lnfw0nlddh9p9elfjf7rr7aypaw4u548m6etj4ra8q0q7r95kz'
+[08:00:50] INFO: Faucet response: OK
+[08:00:50] INFO: tNIGHT の着金を待っています…
+Wallet.Sync: [object ErrorEvent]
+    at file:///mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/v1/Sync.js:126:169
+    at e (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:369:45)
+    at error (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:382:24)
+    at Object.failCase (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:749:29)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:806:42)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/Function.ts:255:18)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:747:10)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/Function.ts:245:18)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/internal/cause.ts:380:3)
+    at <anonymous> (/mnt/c/Users/ynimura/midnight_demo/tools/dust/node_modules/effect/src/Function.ts:245:18) {
+  _tag: 'Wallet.Sync'
+}
+Terminated

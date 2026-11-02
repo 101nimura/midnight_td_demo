@@ -1,0 +1,233 @@
+// =====================================================================
+//  Tokenized Deposit (トークン化預金) - Midnight Compact contract
+// ---------------------------------------------------------------------
+//  ・銀行（発行体）が KYC 済み口座を登録し、預金トークンを発行する
+//  ・利用者は秘密鍵の知識をゼロ知識証明して移転・償還を行う
+//  ・銀行は凍結 / 強制移転 / 強制償還 / 全体停止 を実行できる
+//
+//  口座ID = persistentHash("tdeposit:acct:" || secretKey)
+//  秘密鍵はブラウザ内のプライベートステートにのみ保持され、
+//  チェーン上には口座ID（ハッシュ）しか公開されない。
+// =====================================================================
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// 操作種別（履歴用）
+export enum OpKind {
+  REGISTER,
+  ISSUE,
+  TRANSFER,
+  REDEEM,
+  FORCE_TRANSFER,
+  FORCE_REDEEM,
+  FREEZE,
+  UNFREEZE,
+  PAUSE,
+  UNPAUSE
+}
+
+// 操作履歴レコード
+export struct OpRecord {
+  kind: OpKind;
+  sender: Bytes<32>;
+  receiver: Bytes<32>;
+  amount: Uint<64>;
+}
+
+// ---------------- 公開レジャー ----------------
+export ledger issuer: Bytes<32>;                     // 発行体（銀行）の口座ID
+export ledger tokenName: Opaque<"string">;           // トークン名
+export ledger tokenSymbol: Opaque<"string">;         // シンボル
+export ledger totalSupply: Uint<64>;                 // 発行残高
+export ledger totalIssued: Uint<64>;                 // 累計発行額
+export ledger totalRedeemed: Uint<64>;               // 累計償還額
+export ledger paused: Boolean;                       // 全体停止フラグ
+export ledger registered: Map<Bytes<32>, Boolean>;   // KYC 登録済み口座
+export ledger frozen: Map<Bytes<32>, Boolean>;       // 凍結口座
+export ledger balances: Map<Bytes<32>, Uint<64>>;    // 残高
+export ledger opCount: Counter;                      // 操作数
+export ledger history: Map<Uint<64>, OpRecord>;      // 操作履歴
+
+// ---------------- 秘密入力（ウィットネス） ----------------
+witness localSecretKey(): Bytes<32>;
+
+constructor(name: Opaque<"string">, symbol: Opaque<"string">) {
+  issuer = disclose(accountId(localSecretKey()));
+  tokenName = disclose(name);
+  tokenSymbol = disclose(symbol);
+  totalSupply = 0;
+  totalIssued = 0;
+  totalRedeemed = 0;
+  paused = false;
+}
+
+// 秘密鍵から口座IDを導出（純粋関数：UI 側でも同じ計算を行う）
+export pure circuit accountId(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "tdeposit:acct:"), sk]);
+}
+
+// ---------------- 内部ヘルパー ----------------
+circuit callerId(): Bytes<32> {
+  return disclose(accountId(localSecretKey()));
+}
+
+circuit assertIssuer(): [] {
+  assert(callerId() == issuer, "発行体（銀行）のみ実行できます");
+}
+
+circuit isRegistered(acct: Bytes<32>): Boolean {
+  return registered.member(acct);
+}
+
+circuit isFrozen(acct: Bytes<32>): Boolean {
+  return frozen.member(acct);
+}
+
+circuit balanceOf(acct: Bytes<32>): Uint<64> {
+  if (balances.member(acct)) {
+    return balances.lookup(acct);
+  }
+  return 0;
+}
+
+circuit credit(acct: Bytes<32>, amount: Uint<64>): [] {
+  balances.insert(acct, (balanceOf(acct) + amount) as Uint<64>);
+}
+
+circuit debit(acct: Bytes<32>, amount: Uint<64>): [] {
+  const bal = balanceOf(acct);
+  assert(bal >= amount, "残高不足です");
+  balances.insert(acct, (bal - amount) as Uint<64>);
+}
+
+circuit record(kind: OpKind, src: Bytes<32>, dst: Bytes<32>, amount: Uint<64>): [] {
+  history.insert(opCount.read(), OpRecord { kind: kind, sender: src, receiver: dst, amount: amount });
+  opCount.increment(1);
+}
+
+// =====================================================================
+//  発行体（銀行）オペレーション
+// =====================================================================
+
+// 口座登録（KYC 完了）
+export circuit registerAccount(acct: Bytes<32>): [] {
+  assertIssuer();
+  const a = disclose(acct);
+  assert(!isRegistered(a), "既に登録済みの口座です");
+  registered.insert(a, true);
+  balances.insert(a, 0);
+  record(OpKind.REGISTER, issuer, a, 0);
+}
+
+// 発行（預金の受入れに伴うトークン発行）
+export circuit issue(dst: Bytes<32>, amount: Uint<64>): [] {
+  assertIssuer();
+  assert(!paused, "システム停止中です");
+  const t = disclose(dst);
+  const amt = disclose(amount);
+  assert(amt > 0, "金額は 1 以上を指定してください");
+  assert(isRegistered(t), "未登録の口座です");
+  credit(t, amt);
+  totalSupply = (totalSupply + amt) as Uint<64>;
+  totalIssued = (totalIssued + amt) as Uint<64>;
+  record(OpKind.ISSUE, issuer, t, amt);
+}
+
+// 強制移転（裁判所命令・誤送金訂正などを想定。凍結口座からも移転可）
+export circuit forceTransfer(src: Bytes<32>, dst: Bytes<32>, amount: Uint<64>): [] {
+  assertIssuer();
+  const f = disclose(src);
+  const t = disclose(dst);
+  const amt = disclose(amount);
+  assert(amt > 0, "金額は 1 以上を指定してください");
+  assert(f != t, "移転元と移転先が同じです");
+  assert(isRegistered(f), "移転元が未登録の口座です");
+  assert(isRegistered(t), "移転先が未登録の口座です");
+  debit(f, amt);
+  credit(t, amt);
+  record(OpKind.FORCE_TRANSFER, f, t, amt);
+}
+
+// 強制償還（口座解約・差押え等に伴うトークン消却）
+export circuit forceRedeem(src: Bytes<32>, amount: Uint<64>): [] {
+  assertIssuer();
+  const f = disclose(src);
+  const amt = disclose(amount);
+  assert(amt > 0, "金額は 1 以上を指定してください");
+  assert(isRegistered(f), "未登録の口座です");
+  debit(f, amt);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+  totalRedeemed = (totalRedeemed + amt) as Uint<64>;
+  record(OpKind.FORCE_REDEEM, f, issuer, amt);
+}
+
+// 口座凍結
+export circuit freezeAccount(acct: Bytes<32>): [] {
+  assertIssuer();
+  const a = disclose(acct);
+  assert(isRegistered(a), "未登録の口座です");
+  assert(!isFrozen(a), "既に凍結されています");
+  frozen.insert(a, true);
+  record(OpKind.FREEZE, issuer, a, 0);
+}
+
+// 凍結解除
+export circuit unfreezeAccount(acct: Bytes<32>): [] {
+  assertIssuer();
+  const a = disclose(acct);
+  assert(isFrozen(a), "凍結されていない口座です");
+  frozen.remove(a);
+  record(OpKind.UNFREEZE, issuer, a, 0);
+}
+
+// 全体停止
+export circuit pause(): [] {
+  assertIssuer();
+  assert(!paused, "既に停止中です");
+  paused = true;
+  record(OpKind.PAUSE, issuer, issuer, 0);
+}
+
+// 停止解除
+export circuit unpause(): [] {
+  assertIssuer();
+  assert(paused, "停止中ではありません");
+  paused = false;
+  record(OpKind.UNPAUSE, issuer, issuer, 0);
+}
+
+// =====================================================================
+//  利用者オペレーション（秘密鍵の所有をゼロ知識で証明）
+// =====================================================================
+
+// 移転（送金）
+export circuit transfer(dst: Bytes<32>, amount: Uint<64>): [] {
+  assert(!paused, "システム停止中です");
+  const f = callerId();
+  const t = disclose(dst);
+  const amt = disclose(amount);
+  assert(amt > 0, "金額は 1 以上を指定してください");
+  assert(f != t, "自分自身には送金できません");
+  assert(isRegistered(f), "送金元が未登録の口座です");
+  assert(isRegistered(t), "送金先が未登録の口座です");
+  assert(!isFrozen(f), "送金元口座は凍結されています");
+  assert(!isFrozen(t), "送金先口座は凍結されています");
+  debit(f, amt);
+  credit(t, amt);
+  record(OpKind.TRANSFER, f, t, amt);
+}
+
+// 償還（トークンを消却し、銀行預金へ払戻し）
+export circuit redeem(amount: Uint<64>): [] {
+  assert(!paused, "システム停止中です");
+  const f = callerId();
+  const amt = disclose(amount);
+  assert(amt > 0, "金額は 1 以上を指定してください");
+  assert(isRegistered(f), "未登録の口座です");
+  assert(!isFrozen(f), "口座は凍結されています");
+  debit(f, amt);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+  totalRedeemed = (totalRedeemed + amt) as Uint<64>;
+  record(OpKind.REDEEM, f, issuer, amt);
+}

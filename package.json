@@ -1,0 +1,49 @@
+{
+  "name": "tokenized-deposit-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Midnight (Preview) tokenized deposit demo with Lace wallet",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "compact": "compact compile contract/tdeposit.compact contract/managed/tdeposit",
+    "compact:fast": "compact compile --skip-zk contract/tdeposit.compact contract/managed/tdeposit",
+    "copy-keys": "mkdir -p public && rm -rf public/keys public/zkir && cp -r contract/managed/tdeposit/keys public/keys && cp -r contract/managed/tdeposit/zkir public/zkir",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "npm run copy-keys && vite --host",
+    "build": "npm run copy-keys && tsc --noEmit && vite build",
+    "start": "vite preview --host",
+    "build:single": "tsc --noEmit && vite build --config vite.single.config.ts --mode single && mv dist-single/index.html dist-single/tdeposit-demo.html"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/dapp-connector-api": "4.0.1",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+    "buffer": "^6.0.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "rxjs": "^7.8.2",
+    "semver": "^7.7.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/semver": "^7.7.1",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.14",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vite-plugin-wasm": "^3.6.0",
+    "vitest": "^4.1.0"
+  }
+}

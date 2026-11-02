@@ -1,0 +1,7 @@
+
+> start
+> tsx designate.ts --fund-only
+
+Terminated
+[17:28:47.479] [32mINFO[39m (5603): [36mInitializing wallet builder for preview[39m
+[17:28:47.575] [32mINFO[39m (5603): [36mCreating dust wallet with params: {"indexerClientConnection":{"indexerHttpUrl":"https://indexer.preview.midnight.network/api/v4/graphql","indexerWsUrl":"wss://indexer.preview.midnight.network/api/v4/graphql/ws"},"provingServerUrl":"http://localhost:6300/","networkId":"preview","relayURL":"wss://rpc.preview.midnight.network/","txHistoryStorage":{"storage":{}},"costParameters":{"ledgerParams":{"__wbg_ptr":4654560},"additionalFeeOverhead":"1000","feeBlocksMargin":5}}[39m

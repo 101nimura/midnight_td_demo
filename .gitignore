@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vite/
+public/keys/
+public/zkir/
+.tools/*.log
+certs/
+tools/dust/node_modules/
+tools/dust/.demo-wallet-seed
+dist-single/

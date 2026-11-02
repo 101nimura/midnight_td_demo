@@ -1,0 +1,22 @@
+
+> start
+> tsx designate.ts mn_dust_preview1wv48y6nnd5atjnga00ay0dmf5lqn94s0j4tue7w4ymf0u3dd2qcpjyszahy
+
+[17:30:21.579] [32mINFO[39m (6219): [36mInitializing wallet builder for preview[39m
+[17:30:21.662] [32mINFO[39m (6219): [36mCreating dust wallet with params: {"indexerClientConnection":{"indexerHttpUrl":"https://indexer.preview.midnight.network/api/v4/graphql","indexerWsUrl":"wss://indexer.preview.midnight.network/api/v4/graphql/ws"},"provingServerUrl":"http://localhost:6300/","networkId":"preview","relayURL":"wss://rpc.preview.midnight.network/","txHistoryStorage":{"storage":{}},"costParameters":{"ledgerParams":{"__wbg_ptr":4654560},"additionalFeeOverhead":"1000","feeBlocksMargin":5}}[39m
+[08:30:21] INFO: DUST の受取先（Lace）: mn_dust_preview1wv48y6nnd5atjnga00ay0dmf5lqn94s0j4tue7w4ymf0u3dd2qcpjyszahy
+[08:30:21] INFO: 保存済みのデモ専用ウォレットを使用します
+[08:30:21] INFO: デモ専用ウォレットの tNIGHT アドレス: mn_addr_preview159ph4rd4lnfw0nlddh9p9elfjf7rr7aypaw4u548m6etj4ra8q0q7r95kz
+[08:30:21] INFO: ウォレットを同期中…（数分かかることがあります）
+2026-11-02 17:30:24        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
+2026-11-02 17:30:24        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
+[08:42:28] INFO: tNIGHT 残高が 0 のため Faucet に請求します…
+[08:42:28] INFO: Requesting tokens from 'https://midnight-tmnight-preview.nethermind.dev/' for address: 'mn_addr_preview159ph4rd4lnfw0nlddh9p9elfjf7rr7aypaw4u548m6etj4ra8q0q7r95kz'
+[08:42:29] INFO: Faucet response: OK
+[08:42:29] INFO: tNIGHT の着金を待っています…
+[08:45:39] INFO: tNIGHT 残高: 5000000000
+[08:45:41] INFO: 登録トランザクションの手数料見積り: 1001（登録する tNIGHT から生成される DUST で支払われます）
+[08:45:41] INFO: 手数料分の DUST が生成されるまで待機します…
+[08:45:41] INFO: 1 個の UTXO を DUST 生成に登録します（ZK 証明を生成中…）
+[08:46:00] INFO: 登録トランザクションを送信しました: 00f5b4c26073944ddfe345b3cfef42ef80fb3029875b6b423c22b2c4e4f8331dbf
+[08:46:00] INFO: 数分後から Lace の DUST アドレスに DUST が蓄積されます。デモ画面の「DUST: 再取得」で確認してください。
