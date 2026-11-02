@@ -1,0 +1,48 @@
+# 単一 HTML 版（dist-single/tdeposit-demo.html）だけを GitHub Pages に公開する
+#   公開 URL: https://<ユーザー名>.github.io/<リポジトリ名>/
+#   事前設定: リポジトリの Settings → Pages → Source を「GitHub Actions」にする
+name: Deploy single HTML to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist-single/tdeposit-demo.html'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # HTML 1 枚だけを公開用フォルダに配置（ソースや docs は公開しない）
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp dist-single/tdeposit-demo.html _site/index.html
+          cp dist-single/tdeposit-demo.html _site/tdeposit-demo.html
+          touch _site/.nojekyll
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
