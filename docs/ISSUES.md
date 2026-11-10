@@ -250,3 +250,7 @@
   - エラーの `code` / `reason` / `cause` の連鎖まで展開して表示するようにした（`describeError`、`src/midnight/wallet.ts`）。
   - S-2 に「Proof Server の起動確認」を追加し、`Internal Server Error` で失敗したときは Proof Server を確認するよう案内する。
 - 示唆: 本番では、操作の前に Proof Server などの依存先のヘルスチェックを行い、ウォレットのエラーを業務向けの文言に変換する仕組みが必要（M3）。
+- 追記（同日）: Proof Server を起動した後も同じエラーが続いた。**Proof Server のログには、Lace からの `POST /prove` が 1 件も届いていなかった**（11/2 には届いていた）。`Internal Server Error` はローカルの Proof Server ではなく、Lace が使っている別のサーバーから返っていると考えられる。開発版の Lace（`4.1.0-canary`）への更新で、証明サーバーの設定が既定に戻った可能性がある。
+  - DApp からは、Lace がどの証明サーバーを使っているか分からない（`getConfiguration()` の `proverServerUri` は非推奨で、値が入らないことがある）。接続時に Lace の設定（ノード・インデクサ・証明サーバー）を実行ログに出すようにした。
+  - Lace の設定を変更すると DApp との接続が切れ、次の操作が `[InternalError] No account is connected for this dApp. Please reconnect.` で失敗した。この場合はセッションを破棄し、次の操作で接続し直すようにした。
+  - 示唆: ウォレット側の設定（証明サーバー・接続先）を DApp から確認・強制できないため、利用者の端末ごとの設定の違いが障害の原因になる（M2）。

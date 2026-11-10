@@ -375,7 +375,11 @@ async function execTasks(req: TxReq, tasks: Task[], fin: (rs: TxResult[]) => voi
   } catch (e) {
     cleanupProg();
     log(`${tasks[ti]?.label || req.op} 失敗: ${errMsg(e)}`, 'error');
-    if (onErr && onErr(e)) return;
+    if (/No account is connected|reconnect|Disconnected|not connected/i.test(errMsg(e))) {
+      // Lace 側で接続が切れた（設定の変更・ロック・アカウントの切替など）。次の操作で接続し直す
+      SUB?.unsubscribe(); SUB = undefined; API = undefined; SESSION = undefined; AUTO_TRIED = false;
+      log('Lace との接続が切れたため、セッションを破棄しました。次の操作で接続し直します', 'error');
+    } else if (onErr && onErr(e)) return;
     if (/Internal Server Error|ServerError|Failed to fetch/i.test(errMsg(e))) await checkProofServer();
     errorDlg(req.op, e, rs.length);
   }
@@ -385,9 +389,13 @@ function errorDlg(op: string, e: unknown, doneN: number) {
   const m = errMsg(e);
   const hints: string[] = [];
   if (/発行体/.test(m)) hints.push('発行体（銀行）の口座鍵が、このコントラクトをデプロイした鍵と一致していません（別のブラウザでデプロイした場合など）。口座鍵をインポートしてください。');
-  if (/Internal Server Error|ServerError|Failed to fetch|ECONNREFUSED/i.test(m))
-    hints.push(`Lace が証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 8.0.3 と表示されることを確かめます。`);
-  else if (/dust|fee|balance/i.test(m)) hints.push('Lace の DUST 残高を確認してください（0 だと手数料を支払えません）。');
+  const lost = /No account is connected|reconnect|Disconnected|not connected/i.test(m);
+  if (lost) hints.push('<b>Lace との接続が切れています</b>（Lace の設定の変更・ロック・アカウントの切替などで切れます）。このまま、もう一度操作すると接続し直します（Lace の接続の承認画面が開きます）。うまくいかない場合は、ページを再読み込みしてください。');
+  else if (/Internal Server Error|ServerError|Failed to fetch|ECONNREFUSED/i.test(m))
+    hints.push(PS_OK === true
+      ? `Lace の内部で、サーバーからエラー（Internal Server Error）が返っています。ローカルの Proof Server（${PROOF_URL}）には接続できるので、<b>Lace がローカルの Proof Server を使っていない</b>可能性があります。Lace の 設定 → Midnight で、証明サーバーが「カスタムプルーフサーバー」<code>${PROOF_URL}</code> になっているか確認してください（Lace の更新で既定に戻ることがあります）。それでも失敗する場合は、Lace 単体の送金（自分宛の tNIGHT 送金など）も失敗するかを確認してください。失敗するなら、Lace とネットワーク側の問題です。`
+      : `Lace が証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 8.0.3 と表示されることを確かめます。`);
+  else if (/insufficient|not enough|dust balance|NotEnough/i.test(m)) hints.push('Lace の DUST 残高を確認してください（0 だと手数料を支払えません）。');
   if (/proof|prove|6300|fetch/i.test(m)) hints.push('Proof Server（http://localhost:6300）が起動しているか、Lace の証明サーバー設定を確認してください。');
   if (/reject|denied|cancel/i.test(m)) hints.push('Lace で承認が拒否されました。');
   if (/balanceUnsealedTransaction|InternalError|読み込めません/.test(m) && SESSION && /canary|alpha|beta|rc/i.test(SESSION.info.apiVersion))

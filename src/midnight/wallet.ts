@@ -126,6 +126,9 @@ export const connectWallet = async (log: (msg: string) => void): Promise<Session
     throw new Error(`ウォレットのネットワーク (${status.networkId}) が ${NETWORK_ID} ではありません。Lace の設定で Preview を選択してください。`);
   }
   const config = await api.getConfiguration();
+  log(
+    `Lace の設定: node=${config.substrateNodeUri} / indexer=${config.indexerUri} / 証明サーバー=${config.proverServerUri ?? "（Lace は公開していません：Lace の 設定 → Midnight で確認してください）"}`,
+  );
   const shielded = await api.getShieldedAddresses();
   const { unshieldedAddress } = await api.getUnshieldedAddress();
 
