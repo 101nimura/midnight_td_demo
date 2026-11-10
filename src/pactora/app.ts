@@ -1,10 +1,10 @@
 /**
- * Pactora UI 版 トークン化預金デモ（Midnight Preview × Lace）
+ * Pactora UI 版 トークン化預金デモ（Midnight Preview ×ウォレット）
  * ---------------------------------------------------------------------------
  *  - 画面・挙動は pactora-phase2-usecase-mock.html（業務 01 トークン化預金）をベースにしている
  *    （CSS はモックからそのまま流用：pactora.css）
  *  - モックの「署名リクエスト」を、実際の Midnight トランザクション
- *    （ブラウザ内で回路を実行 → ZK 証明 → Lace で承認・DUST 支払い → 送信 → ブロック取り込み）に置き換えた
+ *    （ブラウザ内で回路を実行 → ZK 証明 →ウォレットで承認・DUST 支払い → 送信 → ブロック取り込み）に置き換えた
  *  - オンチェーン：提供開始（デプロイ）／口座登録／発行（mint）／送金／償還（burn）／強制移転／強制償還／凍結／全体停止
  *  - オフチェーン（このブラウザの localStorage）：普通預金（勘定系の模擬）・入出金の申込・返却依頼・
  *    強制移転の申請・照合結果・監査ログ（Tx ハッシュ）
@@ -151,7 +151,7 @@ function addEvent(op: string, target: string, result?: string, tx?: string | nul
 }
 
 /* =====================================================================
- * 実行時の状態（Lace・コントラクト・オンチェーンの状態）
+ * 実行時の状態（ウォレット・コントラクト・オンチェーンの状態）
  * ===================================================================== */
 let SESSION: Session | undefined;
 let API: TDepositAPI | undefined;
@@ -248,10 +248,10 @@ function openStep(i: number) {
 }
 
 /* =====================================================================
- * Lace 接続とコントラクト
+ *ウォレット接続とコントラクト
  * ===================================================================== */
-async function connectLace() {
-  log('Lace（Midnight）を探しています…');
+async function connectWalletSession() {
+  log('ウォレット（Midnight）を探しています…');
   const s = await connectWallet((m) => log(m));
   // 送信完了をログに出す（進捗表示で「ブロック取り込み待ち」に切り替えるため）
   const mp = s.providers.midnightProvider, orig = mp.submitTx.bind(mp);
@@ -273,14 +273,14 @@ function useApi(a: TDepositAPI) {
   save();
 }
 async function joinContract(addr: string) {
-  if (!SESSION) await connectLace();
+  if (!SESSION) await connectWalletSession();
   log(`コントラクトに接続しています: ${addr}`);
   const a = await TDepositAPI.join(SESSION!.providers, addr.trim(), skOf('bank'));
   useApi(a);
   log(`コントラクトに接続しました: ${a.address}`, 'ok');
 }
 async function ensureReady(needContract: boolean) {
-  if (!SESSION) await connectLace();
+  if (!SESSION) await connectWalletSession();
   if (needContract && !API) {
     if (!S.contract) throw new Error('コントラクトがまだありません。△△銀行が「資金トークン 一覧」で提供を開始（デプロイ）してください。');
     await joinContract(S.contract);
@@ -321,7 +321,7 @@ let PEND: (() => void) | null = null;
 
 type Task = { label: string; run: () => Promise<TxResult>; needContract?: boolean };
 type TxReq = { op: string; rows: [string, string][]; signer: Holder; warn?: string; tone?: string };
-const STAGES = ['ブラウザ内で回路を実行し、ZK 証明を生成', 'Lace で承認（手数料 DUST の支払い）', 'トランザクションを送信', 'ブロックへの取り込みを確認'];
+const STAGES = ['ブラウザ内で回路を実行し、ZK 証明を生成', 'ウォレットで承認（手数料 DUST の支払い）', 'トランザクションを送信', 'ブロックへの取り込みを確認'];
 
 /** モックの「署名リクエスト」に相当。承認すると実際に Midnight のトランザクションを実行する */
 function txSign(req: TxReq, tasks: Task[], fin: (rs: TxResult[]) => void, onErr?: (e: unknown) => boolean) {
@@ -330,9 +330,9 @@ function txSign(req: TxReq, tasks: Task[], fin: (rs: TxResult[]) => void, onErr?
   const signer = req.signer;
   modal(`<div class="dlg-h sign">🔑 トランザクションの実行（Midnight ${esc(NETWORK_ID)}）</div><div class="dlg-b">
     <p style="margin:0 0 12px">以下の内容でトランザクションを実行します。内容を確認して承認してください。</p>
-    ${kvs([['操作', req.op], ...req.rows, ['証明する口座鍵', `${who(signer)}<br><span class="mono">口座ID ${short(KEYS[signer].id, 8)}</span>`], ['手数料', `接続中の Lace が DUST で支払い${SESSION?.info.dustBalance !== undefined ? `（残高 ${num(SESSION.info.dustBalance)}）` : ''}`], ['トランザクション数', `${tasks.length} 件`]])}
+    ${kvs([['操作', req.op], ...req.rows, ['証明する口座鍵', `${who(signer)}<br><span class="mono">口座ID ${short(KEYS[signer].id, 8)}</span>`], ['手数料', `接続中のウォレットが DUST で支払い${SESSION?.info.dustBalance !== undefined ? `（残高 ${num(SESSION.info.dustBalance)}）` : ''}`], ['トランザクション数', `${tasks.length} 件`]])}
     ${req.warn ? `<div class="box box-ng" style="margin-top:12px;font-size:calc(12px + var(--fs))">${req.warn}</div>` : ''}
-    <div class="box box-warn" style="margin-top:12px;font-size:calc(12px + var(--fs))">承認すると、口座鍵を公開せずに「権限・所有」をゼロ知識証明します（数十秒〜数分）。途中で <b>Lace の承認画面</b>が開くので、承認してください。</div></div>
+    <div class="box box-warn" style="margin-top:12px;font-size:calc(12px + var(--fs))">承認すると、口座鍵を公開せずに「権限・所有」をゼロ知識証明します（数十秒〜数分）。途中で <b>ウォレットの承認画面</b>が開くので、承認してください。</div></div>
     <div class="dlg-f"><button class="btn gh" data-act="closeModal">拒否</button><button class="btn ${req.tone === 'ng' ? 'ng' : ''}" data-act="signOk" id="signBtn">承認して実行</button></div>`, true);
 }
 let PROG_TIMER = 0;
@@ -348,11 +348,11 @@ async function execTasks(req: TxReq, tasks: Task[], fin: (rs: TxResult[]) => voi
       <ul class="prov-list">${STAGES.map((l, j) => `<li class="${j < stage ? 'done' : j === stage ? 'run' : ''}"><span class="ic">${j < stage ? '✓' : ''}</span><span class="lb">${l}</span><span class="st">${j < stage ? '完了' : j === stage ? '実行中' : '待機中'}</span></li>`).join('')}</ul>
       <div class="pbar"><i style="width:${((ti * STAGES.length + stage) / (tasks.length * STAGES.length)) * 100}%"></i></div>
       <div class="mlog">${lines.slice(-5).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
-      <div class="xs" style="margin-top:8px">処理中はほかの操作はできません。Lace の承認画面が見当たらない場合は、ブラウザ右上の拡張機能アイコンから Lace を開いてください。</div></div>`, true);
+      <div class="xs" style="margin-top:8px">処理中はほかの操作はできません。ウォレットの承認画面が見当たらない場合は、ブラウザ右上の拡張機能アイコンからウォレットを開いてください。</div></div>`, true);
   };
   LOG_HOOK = (m) => {
     lines.push(m);
-    if (m.startsWith('Lace でトランザクションを承認')) stage = Math.max(stage, 1);
+    if (m.startsWith('ウォレットでトランザクションを承認')) stage = Math.max(stage, 1);
     else if (m.startsWith('トランザクションを送信中')) stage = Math.max(stage, 2);
     else if (m.startsWith('送信しました')) stage = Math.max(stage, 3);
     draw();
@@ -376,9 +376,9 @@ async function execTasks(req: TxReq, tasks: Task[], fin: (rs: TxResult[]) => voi
     cleanupProg();
     log(`${tasks[ti]?.label || req.op} 失敗: ${errMsg(e)}`, 'error');
     if (/No account is connected|reconnect|Disconnected|not connected/i.test(errMsg(e))) {
-      // Lace 側で接続が切れた（設定の変更・ロック・アカウントの切替など）。次の操作で接続し直す
+      //ウォレット側で接続が切れた（設定の変更・ロック・アカウントの切替など）。次の操作で接続し直す
       SUB?.unsubscribe(); SUB = undefined; API = undefined; SESSION = undefined; AUTO_TRIED = false;
-      log('Lace との接続が切れたため、セッションを破棄しました。次の操作で接続し直します', 'error');
+      log('ウォレットとの接続が切れたため、セッションを破棄しました。次の操作で接続し直します', 'error');
     } else if (onErr && onErr(e)) return;
     if (/Internal Server Error|ServerError|Failed to fetch/i.test(errMsg(e))) await checkProofServer();
     errorDlg(req.op, e, rs.length);
@@ -390,16 +390,16 @@ function errorDlg(op: string, e: unknown, doneN: number) {
   const hints: string[] = [];
   if (/発行体/.test(m)) hints.push('発行体（銀行）の口座鍵が、このコントラクトをデプロイした鍵と一致していません（別のブラウザでデプロイした場合など）。口座鍵をインポートしてください。');
   const lost = /No account is connected|reconnect|Disconnected|not connected/i.test(m);
-  if (lost) hints.push('<b>Lace との接続が切れています</b>（Lace の設定の変更・ロック・アカウントの切替などで切れます）。このまま、もう一度操作すると接続し直します（Lace の接続の承認画面が開きます）。うまくいかない場合は、ページを再読み込みしてください。');
+  if (lost) hints.push('<b>ウォレットとの接続が切れています</b>（ウォレットの設定の変更・ロック・アカウントの切替などで切れます）。このまま、もう一度操作すると接続し直します（ウォレットの接続の承認画面が開きます）。うまくいかない場合は、ページを再読み込みしてください。');
   else if (/Internal Server Error|ServerError|Failed to fetch|ECONNREFUSED/i.test(m))
     hints.push(PS_OK === true
-      ? `Lace の内部で、サーバーからエラー（Internal Server Error）が返っています。ローカルの Proof Server（${PROOF_URL}）には接続できるので、<b>Lace がローカルの Proof Server を使っていない</b>可能性があります。Lace の 設定 → Midnight で、証明サーバーが「カスタムプルーフサーバー」<code>${PROOF_URL}</code> になっているか確認してください（Lace の更新で既定に戻ることがあります）。それでも失敗する場合は、Lace 単体の送金（自分宛の tNIGHT 送金など）も失敗するかを確認してください。失敗するなら、Lace とネットワーク側の問題です。`
-      : `Lace が証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 8.0.3 と表示されることを確かめます。`);
-  else if (/insufficient|not enough|dust balance|NotEnough/i.test(m)) hints.push('Lace の DUST 残高を確認してください（0 だと手数料を支払えません）。');
-  if (/proof|prove|6300|fetch/i.test(m)) hints.push('Proof Server（http://localhost:6300）が起動しているか、Lace の証明サーバー設定を確認してください。');
-  if (/reject|denied|cancel/i.test(m)) hints.push('Lace で承認が拒否されました。');
+      ? `ウォレットの内部で、サーバーからエラー（Internal Server Error）が返っています。ローカルの Proof Server（${PROOF_URL}）には接続できるので、<b>ウォレットがローカルの Proof Server を使っていない</b>可能性があります。ウォレットの 設定 → Midnight で、証明サーバーが「カスタムプルーフサーバー」<code>${PROOF_URL}</code> になっているか確認してください（ウォレットの更新で既定に戻ることがあります）。それでも失敗する場合は、ウォレット単体の送金（自分宛の tNIGHT 送金など）も失敗するかを確認してください。失敗するなら、ウォレットとネットワーク側の問題です。`
+      : `ウォレットが証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 8.0.3 と表示されることを確かめます。`);
+  else if (/insufficient|not enough|dust balance|NotEnough/i.test(m)) hints.push('ウォレットの DUST 残高を確認してください（0 だと手数料を支払えません）。');
+  if (/proof|prove|6300|fetch/i.test(m)) hints.push('Proof Server（http://localhost:6300）が起動しているか、ウォレットの証明サーバー設定を確認してください。');
+  if (/reject|denied|cancel/i.test(m)) hints.push('ウォレットで承認が拒否されました。');
   if (/balanceUnsealedTransaction|InternalError|読み込めません/.test(m) && SESSION && /canary|alpha|beta|rc/i.test(SESSION.info.apiVersion))
-    hints.push(`接続中の Lace は開発版（DApp Connector API ${esc(SESSION.info.apiVersion)}）です。このデモは midnight-js 4.1.1（API 4.0.1・ledger v8）で作っており、開発版の Lace とはトランザクションの形式が合わない可能性があります。`);
+    hints.push(`接続中のウォレットは開発版（DApp Connector API ${esc(SESSION.info.apiVersion)}）です。開発版のウォレットは、このデモ（midnight-js 5.0.0・DApp Connector API 4.1.0・ledger 9）とトランザクションの形式が合わない可能性があります。`);
   hints.push('詳しくは「Midnight 実行ログ」と、F12 のコンソールを確認してください。');
   save(); render();
   modal(`<div class="dlg-h ng">実行できませんでした ― ${esc(op)}<button class="x" data-act="closeModal">×</button></div><div class="dlg-b">
@@ -421,7 +421,7 @@ function confirmDlg(title: string, body: string, okLabel: string, okAct: string,
 }
 const txOf = (r: TxResult) => r.txHash;
 /** 画面側の事前チェック（モックと同じくトーストで止める）。null なら OK */
-const needChain = (): string | null => (!SESSION ? 'Lace に接続してください（右上のウォレット）' : !CS ? 'コントラクトの状態を取得中です。しばらくお待ちください' : null);
+const needChain = (): string | null => (!SESSION ? 'ウォレットに接続してください（右上のウォレット）' : !CS ? 'コントラクトの状態を取得中です。しばらくお待ちください' : null);
 
 /* =====================================================================
  * 描画：ログイン前
@@ -460,7 +460,7 @@ function vUsecase() {
   const note = `<p class="xs" style="margin-top:16px">※ 仮称：△△銀行（預金トークン発行）／◎◎物流・☆☆商事（法人投資家）。普通預金（勘定系）は模擬、預金トークンの残高・操作は Midnight ${esc(NETWORK_ID)} 上の実データです。</p>`;
   return preHead() + `<div class="pt-band pf"><div><div class="lp-eb">TOKENIZED DEPOSIT ON MIDNIGHT</div><h1>Pactora × Midnight へようこそ</h1><p>預金トークンの発行・償還、口座登録・送金・強制移転・凍結までを、Midnight のゼロ知識証明付きトランザクションで実行します。</p></div><div class="pt-pf">${platformSvg()}</div></div>
     <div class="pt-body"><div class="card pt-login"><h3>はじめる前に</h3><p class="xs">デモを始める前に、毎回次の項目を確認してください。</p>
-        <ul class="pt-ul"><li>Docker（Rancher Desktop）が Running になり、Proof Server が起動している（http://localhost:6300/version → 8.0.3）</li><li>Lace（Midnight 対応版）のネットワークが <b>Preview</b>、証明サーバーが <b>http://localhost:6300</b></li><li>Lace の <b>DUST が 0 より大きい</b>（0 だと手数料不足ですべての操作が失敗します）</li></ul>
+        <ul class="pt-ul"><li>Docker（Rancher Desktop）が Running になり、Proof Server が起動している（http://localhost:6300/version → 8.0.3）</li><li>Midnight 対応ウォレット（1AM 推奨）のネットワークが <b>Preview</b>、証明サーバーが <b>http://localhost:6300</b></li><li>ウォレットの <b>DUST が 0 より大きい</b>（0 だと手数料不足ですべての操作が失敗します）</li></ul>
         <button class="btn lg" style="width:100%;margin-top:14px" data-act="pickUc">業務 01 を始める →</button></div>
       <div><div class="pt-h"><h3>業務から始める</h3><span class="xs">業務の流れに沿ってガイド付きで操作できます</span></div>
         <div class="pt-list"><div class="ucg-h money">資金サイド<small>MONEY</small></div>${row}</div>${note}</div></div>`;
@@ -470,22 +470,22 @@ function vProvision() {
   const st = (ok: boolean | null, t: string) => `<span class="st">${ok === null ? t : ok ? bd(t, 'ok') : bd(t, 'warn')}</span>`;
   const dust = s?.dustBalance;
   const items: [string, string, boolean | null, string, string][] = [
-    ['Lace（Midnight）に接続', s ? `${esc(s.name)} ／ network=${esc(s.networkId)} ／ 証明：${esc(s.proofMode)}<br><span class="mono">${esc(short(s.unshieldedAddress, 12))}</span>` : 'ブラウザの Lace 拡張機能に接続します。Lace の承認画面が開きます', s ? true : false, s ? '接続済み' : '未接続',
-      s ? '' : `<button class="btn sm" data-act="connect">Lace に接続</button>`],
-    ['手数料（DUST）の確認', s ? `DUST 残高 ${dust === undefined ? '不明' : num(dust)}${s.dustCap !== undefined ? ` ／ 上限 ${num(s.dustCap)}` : ''}${dust === 0n ? '<br><b style="color:var(--ng)">DUST が 0 のため、すべての操作が手数料不足で失敗します（SETUP.md 7 章）</b>' : ''}` : 'Lace に接続すると表示されます', s ? dust !== 0n : null, s ? (dust === 0n ? 'DUST 不足' : 'OK') : '—',
+    ['ウォレット（Midnight）に接続', s ? `${esc(s.name)} ／ network=${esc(s.networkId)} ／ 証明：${esc(s.proofMode)}<br><span class="mono">${esc(short(s.unshieldedAddress, 12))}</span>` : 'ブラウザのウォレット拡張機能に接続します。ウォレットの承認画面が開きます', s ? true : false, s ? '接続済み' : '未接続',
+      s ? '' : `<button class="btn sm" data-act="connect">ウォレットに接続</button>`],
+    ['手数料（DUST）の確認', s ? `DUST 残高 ${dust === undefined ? '不明' : num(dust)}${s.dustCap !== undefined ? ` ／ 上限 ${num(s.dustCap)}` : ''}${dust === 0n ? '<br><b style="color:var(--ng)">DUST が 0 のため、すべての操作が手数料不足で失敗します（SETUP.md 7 章）</b>' : ''}` : 'ウォレットに接続すると表示されます', s ? dust !== 0n : null, s ? (dust === 0n ? 'DUST 不足' : 'OK') : '—',
       s ? '<button class="btn sm gh" data-act="dustRefresh">再取得</button>' : ''],
-    ['Proof Server の起動確認', PS_OK === null ? `${PROOF_URL} に接続できるか確認します（Lace の証明サーバーを「カスタム ${PROOF_URL}」にしている場合に必要）` : PS_OK ? `${PROOF_URL} に接続できました` : `<b style="color:var(--ng)">${PROOF_URL} に接続できません。</b>Rancher Desktop を起動し「Running」になってから、<code>docker compose -f proof-server.yml up -d</code> を実行してください（http://localhost:6300/version → 8.0.3）`, PS_OK, PS_OK === null ? '未確認' : PS_OK ? 'OK' : '停止中',
+    ['Proof Server の起動確認', PS_OK === null ? `${PROOF_URL} に接続できるか確認します（ウォレットの証明サーバーを「カスタム ${PROOF_URL}」にしている場合に必要）` : PS_OK ? `${PROOF_URL} に接続できました` : `<b style="color:var(--ng)">${PROOF_URL} に接続できません。</b>Rancher Desktop を起動し「Running」になってから、<code>docker compose -f proof-server.yml up -d</code> を実行してください（http://localhost:6300/version → 8.0.3）`, PS_OK, PS_OK === null ? '未確認' : PS_OK ? 'OK' : '停止中',
       '<button class="btn sm gh" data-act="psCheck">確認</button>'],
     ['デモユーザーの口座鍵', `${HOLDERS.map((h) => `${orgOf(h)}：<span class="mono">${short(KEYS[h].id, 6)}</span>`).join('<br>')}<br><span class="xs">口座鍵（秘密鍵）はこのブラウザにのみ保存。チェーンには口座ID（ハッシュ）だけが記録されます</span>`, true, '作成済み',
       '<button class="btn sm gh" data-act="keysExport">エクスポート</button> <button class="btn sm gh" data-act="keysImport">インポート</button>'],
     ['コントラクト（預金トークン）', S.contract ? `<span class="mono">${esc(short(S.contract, 10))}</span>${API ? '（接続済み）' : '（ログイン後に自動で接続）'}` : 'まだありません。ログイン後、ガイドの最初のステップで △△銀行がデプロイ（提供開始）します', S.contract ? true : null, S.contract ? '設定済み' : 'ログイン後に作成',
       '<button class="btn sm gh" data-act="joinAsk">既存のアドレスを指定</button>'],
   ];
-  return preHead() + hero(`STEP 2 — BUSINESS ${UC.no} ${UC.en.toUpperCase()} <span class="sid">S-2</span>`, `「${UC.name}」の環境を準備します`, 'Lace に接続し、手数料（DUST）と口座鍵、コントラクトを確認します。', 2) +
+  return preHead() + hero(`STEP 2 — BUSINESS ${UC.no} ${UC.en.toUpperCase()} <span class="sid">S-2</span>`, `「${UC.name}」の環境を準備します`, 'ウォレットに接続し、手数料（DUST）と口座鍵、コントラクトを確認します。', 2) +
     `<div class="pre-b"><div class="prov card"><div class="card-h"><h3>セットアップ</h3><span class="xs">ネットワーク：<span class="mono">Midnight ${esc(NETWORK_ID)}</span></span></div>
      <div class="card-b"><ul class="prov-list">${items.map(([lb, sm, ok, t, btn]) => `<li class="${ok ? 'done' : ''}"><span class="ic">${ok ? '✓' : ''}</span><span class="lb">${lb}<small>${sm}</small></span><span style="display:flex;gap:6px;align-items:center">${btn}${st(ok, t)}</span></li>`).join('')}</ul>
      <div style="display:flex;justify-content:space-between;margin-top:14px"><button class="btn gh" data-act="toUsecase">← 業務選択に戻る</button>
-     <button class="btn" ${s ? '' : 'disabled title="先に Lace に接続してください"'} data-act="toLogin">ログイン画面へ →</button></div></div></div></div>`;
+     <button class="btn" ${s ? '' : 'disabled title="先にウォレットに接続してください"'} data-act="toLogin">ログイン画面へ →</button></div></div></div></div>`;
 }
 function vLogin() {
   const f = U().form, sel = U().sel;
@@ -497,7 +497,7 @@ function vLogin() {
      <div class="row"><span>☐ ログイン状態を保持する</span><span class="link" style="font-weight:400">パスワードを忘れた場合</span></div>
      ${U().loginErr ? `<div class="box box-ng err">メールアドレスまたはパスワードが正しくありません。右のユーザー一覧から選ぶと入力されます。</div>` : ''}
      <button class="btn full lg" data-act="loginForm">ログイン</button>
-     <p class="xs" style="margin:10px 0 0">手数料は接続中の Lace がまとめて支払い、操作の権限・所有は各ユーザーの口座鍵でゼロ知識証明します。</p>
+     <p class="xs" style="margin:10px 0 0">手数料は接続中のウォレットがまとめて支払い、操作の権限・所有は各ユーザーの口座鍵でゼロ知識証明します。</p>
      <div class="lg-uc"><div class="xs" style="letter-spacing:.14em">選択中の業務</div>
        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px"><b style="color:var(--navy);font-size:calc(14px + var(--fs))">BUSINESS ${UC.no}　${UC.name}（Midnight）</b>
        <button class="btn gh sm" data-act="toUsecase">← 業務選択に戻る</button></div></div>
@@ -517,7 +517,7 @@ function vLogin() {
 function vTop() {
   const u = USERS[me()], pop = U().pop, ac = approvalsCount();
   const s = SESSION?.info;
-  const wallet = s ? `<span class="dot"></span><span class="wl">Lace </span><span class="mono">DUST ${s.dustBalance === undefined ? '?' : num(s.dustBalance)}</span>` : `<span class="dot" style="background:#a1a1aa"></span>Lace 未接続`;
+  const wallet = s ? `<span class="dot"></span><span class="wl">ウォレット</span><span class="mono">DUST ${s.dustBalance === undefined ? '?' : num(s.dustBalance)}</span>` : `<span class="dot" style="background:#a1a1aa"></span>ウォレット未接続`;
   const userDd = pop === 'user' ? `<div class="dd"><div class="cap">ユーザーを切り替える（${UC.name}）</div>
      ${ROLE_ORDER.map((r) => { const ids = UC_USERS.filter((id) => roleOf(id) === r); return ids.length ? `<div class="dd-grp" style="--role:${ROLE_COLOR[r]}"><div class="dd-rh"><i></i>${ROLE[r].label}<small>${SIDE[ROLE[r].side].label}</small></div>` + ids.map((id) => `<button class="it ${id === me() ? 'on' : ''}" data-act="switch" data-a="${id}">${av(id, true)}<span><b>${USERS[id].name}${id === me() ? '（ログイン中）' : ''}</b><small>${ROLE[roleOf(id)].label}・${USERS[id].org}</small></span></button>`).join('') + '</div>' : ''; }).join('')}
      <div class="sep"></div><button class="it" data-act="logout"><span><b>ログアウト</b><small>ログイン画面に戻る</small></span></button></div>` : '';
@@ -557,13 +557,13 @@ function vSide() {
 function vApp() {
   const p = U().page, L = LABEL[p] || LABEL.home;
   const body = PAGES[p] && can(p) ? PAGES[p]() : PAGES.home();
-  const st = !SESSION ? '<span style="color:var(--ng)">Lace 未接続</span>' : !S.contract ? '<span>コントラクト未作成</span>' : !CS ? '<span>同期中…</span>' : isPaused() ? '<span style="color:var(--ng)">全体停止中</span>' : '<span class="ok">稼働中</span>';
+  const st = !SESSION ? '<span style="color:var(--ng)">ウォレット未接続</span>' : !S.contract ? '<span>コントラクト未作成</span>' : !CS ? '<span>同期中…</span>' : isPaused() ? '<span style="color:var(--ng)">全体停止中</span>' : '<span class="ok">稼働中</span>';
   const mbar = `<div class="mbar">ネットワーク <b>Midnight ${esc(NETWORK_ID)}</b><span class="sep">｜</span>コントラクト <b class="mono">${S.contract ? esc(short(S.contract, 6)) : '—'}</b><span class="sep">｜</span>発行残高 <b>${CS ? yen(CS.totalSupply) : '—'}</b><span class="sep">｜</span>状態 ${st}${BUSY ? '<span class="sep">｜</span><span class="spin" style="border-color:rgba(0,36,150,.3);border-top-color:var(--brand)"></span> 実行中' : ''}<button class="link" data-act="go" data-a="log">実行ログ › <span class="sid">AD-6</span></button></div>`;
   return vTop() + `<div class="body" style="--role:${ROLE_COLOR[myRole()]}">${vSide()}<div class="main">${mbar}<div class="crumb">${UC.name} ／ ${L.g === 'MAIN' ? '' : L.g + ' ／ '}<b>${L.l}</b></div>
     <div class="page">${connBanner()}${body}</div><div class="foot"><span>© 2026 Pactora. Digital Asset Platform（CAC）× Midnight</span><span>${now().slice(0, 10)}</span></div></div></div>`;
 }
 function connBanner() {
-  if (!SESSION) return `<div class="box box-warn" style="margin-bottom:16px;display:flex;align-items:center;gap:12px"><span style="flex:1">Lace に接続されていません。オンチェーンの残高・状態を表示し、操作するには接続してください。</span><button class="btn sm" data-act="connect">Lace に接続</button></div>`;
+  if (!SESSION) return `<div class="box box-warn" style="margin-bottom:16px;display:flex;align-items:center;gap:12px"><span style="flex:1">ウォレットに接続されていません。オンチェーンの残高・状態を表示し、操作するには接続してください。</span><button class="btn sm" data-act="connect">ウォレットに接続</button></div>`;
   if (S.contract && !API) return `<div class="box box-warn" style="margin-bottom:16px;display:flex;align-items:center;gap:12px"><span style="flex:1">コントラクト <span class="mono">${esc(short(S.contract, 8))}</span> に未接続です。</span><button class="btn sm" data-act="connect">接続する</button></div>`;
   if (S.contract && !CS) return `<div class="box box-info" style="margin-bottom:16px"><span class="spin" style="border-color:rgba(0,36,150,.3);border-top-color:var(--brand)"></span> コントラクトの状態をインデクサから取得しています…</div>`;
   return '';
@@ -627,7 +627,7 @@ PAGES.approvals = () => {
     S.recov.filter((x) => x.status === '承認待ち').forEach((x) => row('強制移転（資金）', 'money', `${orgOf(x.from)} → ${orgOf(x.to)} ${yen(x.amount)}`, nm(x.maker), bd('承認待ち', 'warn'), 'force'));
   }
   if (r === 'admin') S.inq.filter((q) => q.status === '受付').forEach((q) => row('返却依頼', 'ops', `${orgOf(q.from)} の誤送金 ${yen(q.amount)}`, nm(q.from), bd('新しい依頼', 'warn'), 'recovery'));
-  return head('承認・対応待ち', '起票 → 承認 → 実行（ZK 証明・Lace 承認）→ 完了。オンチェーンに影響する操作はここから処理します', 'C-1') + nextCard() +
+  return head('承認・対応待ち', '起票 → 承認 → 実行（ZK 証明・ウォレット承認）→ 完了。オンチェーンに影響する操作はここから処理します', 'C-1') + nextCard() +
     tcard(`あなた宛（${rows.length}）`, tbl(['種別', '内容', '起票', '状態', '>操作'], rows, '対応待ちはありません'));
 };
 
@@ -707,7 +707,7 @@ PAGES.recon = () => {
     `<div class="grid2"><div class="card"><div class="card-h"><h3>Midnight ${esc(NETWORK_ID)}</h3>${r ? bd((r.ok ? '照合済 ✓ ' : '差異あり ') + r.ts.slice(11, 16), r.ok ? 'ok' : 'ng') : on ? bd('未照合', 'mute') : bd('同期待ち', 'mute')}</div><div class="card-b">
       ${kvs([['預金台帳（勘定系ロック・模擬正本）', yen(S.lock)], ['トークン発行残高（オンチェーン）', on ? yen(supply()) : '—'], ['差異', on ? `<b>${yen(diff)}</b>` : '—'], ['　うち 入金処理待ち（ロック済・mint 前）', yen(pi)], ['　うち 出金処理待ち（burn 済・unlock 前）', `−${yen(po)}`], ['説明できない差異', on ? `<b style="color:${diff - pi + po === 0 ? 'var(--ok)' : 'var(--ng)'}">${yen(diff - pi + po)}</b>` : '—']])}
       <div style="margin-top:12px;text-align:right"><button class="btn sm" data-act="recon" ${on ? '' : 'disabled'}>照合を実行</button></div></div></div>
-     <div class="stack"><div class="box box-info">オンチェーンの発行残高は、Lace が接続しているインデクサから取得したコントラクトの公開状態です。勘定系の値はこのブラウザ内の模擬データです。</div>
+     <div class="stack"><div class="box box-info">オンチェーンの発行残高は、ウォレットが接続しているインデクサから取得したコントラクトの公開状態です。勘定系の値はこのブラウザ内の模擬データです。</div>
      ${r ? `<div class="box ${r.ok ? 'box-ok' : 'box-ng'}">前回の照合（${esc(r.ts)}）：預金台帳 ${yen(r.ledger)} ／ オンチェーン ${yen(r.chain)} ／ 差異 ${yen(r.diff)}（処理待ちで説明できる分 ${yen(r.pendIn - r.pendOut)}）</div>` : ''}</div></div>`;
 };
 
@@ -731,7 +731,7 @@ PAGES.wallet = () => {
        <button class="btn sec" style="width:100%;margin-top:12px" data-act="depOut">出金する（償還・burn）</button><div class="hint">トークンを償還（burn）し、銀行の処理後に普通預金へ入金されます</div></div>`)}
      ${tcard('送金（預金トークン）', `<div class="card-b"><div class="xs">チェーン</div><div class="chips" style="margin:4px 0 10px"><button class="chip on">Midnight</button></div>
        <div class="xs">受取人</div><select class="inp" style="width:100%;min-width:0" data-f="xTo">${others.map((x) => `<option value="${x}" ${to === x ? 'selected' : ''}>${orgOf(x)}（${nm(x)}）</option>`).join('')}</select>
-       <div class="xs" style="margin-top:8px">金額</div><input class="inp s" style="width:100%" data-f="xA" value="${esc(f.xA ?? '5,000,000')}" placeholder="金額を入力"><div class="hint">登録済み口座の間で送金（手数料 DUST は Lace が支払い）</div>
+       <div class="xs" style="margin-top:8px">金額</div><input class="inp s" style="width:100%" data-f="xA" value="${esc(f.xA ?? '5,000,000')}" placeholder="金額を入力"><div class="hint">登録済み口座の間で送金（手数料 DUST はウォレットが支払い）</div>
        <button class="btn sec" style="width:100%;margin-top:12px" data-act="xfer">送金する（ZK 証明）</button></div>`)}
     </div>
     <div class="grid2" style="margin-top:16px">${tcard('入金・出金の申込', tbl(['日時', '種別', '>金額', '状態', 'Tx'], mine.map((m) => `<tr><td class="n">${m.ts.slice(5, 16)}</td><td>${m.kind}</td><td class="r n">${yen(m.amount)}</td><td>${m.status === '完了' ? bd('完了', 'ok') : bd('銀行の処理待ち', 'warn')}</td><td>${txSpan(m.kind === '出金' ? m.burnTx : m.tx)}</td></tr>`), 'まだ申込はありません'))}
@@ -767,7 +767,7 @@ const CIRCUITS: [string, string, string][] = [
 PAGES.master = () => {
   const s = SESSION?.info;
   return head('コントラクト・ネットワーク設定', 'ネットワーク・インデクサ・証明の方式、コントラクトと回路（権限）、参加者の口座IDを確認します', 'AD-3') + nextCard() +
-    `<div class="grid2">${tcard('ネットワーク', `<div class="card-b">${kvs([['ネットワーク', `Midnight ${esc(NETWORK_ID)}`], ['ウォレット', s ? `${esc(s.name)}（API ${esc(s.apiVersion)}）` : '未接続'], ['インデクサ', s ? `<span class="mono" style="word-break:break-all">${esc(s.indexerUri)}</span>` : '—'], ['証明の方式', s ? esc(s.proofMode) : '—'], ['ZK 鍵', import.meta.env.VITE_EMBED_ZK ? 'HTML に埋め込み（単一 HTML 版）' : 'サーバーから取得（開発サーバー版）']])}</div>`)}
+    `<div class="grid2">${tcard('ネットワーク', `<div class="card-b">${kvs([['ネットワーク', `Midnight ${esc(NETWORK_ID)}`], ['ウォレット', s ? `${esc(s.name)}（API ${esc(s.apiVersion)}）` : '未接続'], ['インデクサ', s ? `<span class="mono" style="word-break:break-all">${esc(s.indexerUri)}</span>` : '—'], ['証明の方式', s ? esc(s.proofMode) : '—'], ['ZK 鍵', 'HTML と同じ場所の keys/ zkir/ compiler/ から取得（マニフェストで検証）']])}</div>`)}
      ${tcard('コントラクト', `<div class="card-b">${kvs([['アドレス', S.contract ? `<span class="mono" style="word-break:break-all">${esc(S.contract)}</span>` : '—'], ['トークン', `${esc(S.token.name)}（${esc(S.token.sym)}）`], ['発行体の口座ID', CS ? `<span class="mono">${short(CS.issuerHex, 8)}</span>` : '—'], ['言語', 'Compact 0.31.1（contract/tdeposit.compact）']])}</div>`)}</div>` +
     `<div style="margin-top:16px">${tcard('回路と実行権限', tbl(['回路', '操作', '実行できる人（ゼロ知識証明する内容）'], CIRCUITS.map(([c, l, w]) => `<tr><td class="mono">${c}</td><td>${l}</td><td>${w === '発行体' ? '発行体：口座鍵のハッシュが issuer と一致すること' : '保有者：送金元・償還元の口座鍵を持っていること'}</td></tr>`)))}</div>
      <div style="margin-top:16px">${tcard('参加者', tbl(['参加者', '区分', '口座ID', '状態'], UC_USERS.map((p) => `<tr><td><b>${orgOf(p)}</b><div class="xs">${nm(p)}</div></td><td>${ROLE[roleOf(p)].label}</td><td class="mono">${isHolder(p) ? short(KEYS[p].id, 6) : '—（オフチェーンのみ）'}</td><td>${p === 'bank' ? (CS ? (iAmIssuer() ? bd('発行体', 'ok') : bd('発行体と不一致', 'ng')) : '—') : isHolder(p) ? acctState(p) : bd('登録済', 'ok')}</td></tr>`)))}</div>`;
@@ -780,7 +780,7 @@ PAGES.audit = () => head('監査ログ', '誰が・いつ・何を・どの対�
   `<div style="margin-top:16px">${tcard(`オンチェーンの操作履歴（${CS ? CS.history.length : '—'}件・コントラクトの history）`, tbl(['#', '種別', 'From', 'To', '>金額'], CS ? histRows(CS.history) : [], CS ? '操作はまだありません' : 'コントラクトの状態を取得中です'))}</div>`;
 
 /* ---------- 実行ログ（AD-6） ---------- */
-PAGES.log = () => head('Midnight 実行ログ', '証明の生成・Lace の承認・送信の進み具合とエラー（困ったらまずここを見る）', 'AD-6', '<button class="btn gh" data-act="dustRefresh">DUST を再取得</button>') +
+PAGES.log = () => head('Midnight 実行ログ', '証明の生成・ウォレットの承認・送信の進み具合とエラー（困ったらまずここを見る）', 'AD-6', '<button class="btn gh" data-act="dustRefresh">DUST を再取得</button>') +
   tcard(`ログ（${LOGS.length}件・このタブのみ）`, LOGS.length ? `<div class="card-b mlog" style="max-height:none">${LOGS.map((l) => `<div class="${l.level}"><span class="n" style="color:var(--ink3)">${l.at}</span> ${esc(l.msg)}</div>`).join('')}</div>` : '<div class="empty">まだログはありません</div>');
 
 /* =====================================================================
@@ -806,26 +806,26 @@ A.go = (el) => go(el.dataset.a || 'home');
 A.tab = (el) => { U().tab = el.dataset.a as UI['tab']; render(); };
 A.step = (el) => openStep(Number(el.dataset.a));
 
-/* --- Lace・コントラクト --- */
+/* ---ウォレット・コントラクト --- */
 A.connect = () => {
   if (BUSY) return;
-  BUSY = true; toast('Lace に接続しています…（Lace の承認画面が開いたら承認してください）'); render();
-  ensureReady(!!S.contract).then(() => { BUSY = false; toast('接続しました'); render(); }).catch((e) => { BUSY = false; render(); errorDlg('Lace に接続', e, 0); });
+  BUSY = true; toast('ウォレットに接続しています…（ウォレットの承認画面が開いたら承認してください）'); render();
+  ensureReady(!!S.contract).then(() => { BUSY = false; toast('接続しました'); render(); }).catch((e) => { BUSY = false; render(); errorDlg('ウォレットに接続', e, 0); });
 };
 A.psCheck = () => { void checkProofServer().then((ok) => { render(); toast(ok ? 'Proof Server に接続できました' : 'Proof Server に接続できません（Rancher Desktop と Proof Server を起動してください）', ok ? '' : 'ng'); }); };
 A.dustRefresh = () => {
-  if (!SESSION) { toast('先に Lace に接続してください', 'ng'); return; }
+  if (!SESSION) { toast('先にウォレットに接続してください', 'ng'); return; }
   readWalletStatus(SESSION.api, (m) => log(m)).then((st) => { Object.assign(SESSION!.info, st); render(); toast(`DUST 残高 ${st.dustBalance === undefined ? '不明' : num(st.dustBalance)}`); });
 };
 A.walletDlg = () => {
   const s = SESSION?.info, id = me();
   modal(`<div class="dlg-h">ウォレット・口座鍵<span class="sid">L-3</span><button class="x" data-act="closeModal">×</button></div><div class="dlg-b">
     <div class="xs" style="font-weight:700;color:var(--navy);margin-bottom:6px">1. 手数料を支払うウォレット（全ユーザー共通）</div>
-    ${s ? kvs([['ウォレット', `${esc(s.name)} ／ ${esc(s.networkId)}`], ['アドレス', `<span class="mono" style="word-break:break-all">${esc(s.unshieldedAddress)}</span>`], ['DUST', `${s.dustBalance === undefined ? '不明' : num(s.dustBalance)}${s.dustCap !== undefined ? ` ／ 上限 ${num(s.dustCap)}` : ''}`], ['DUST アドレス', s.dustAddress ? `<span class="mono" style="word-break:break-all">${esc(s.dustAddress)}</span> <button class="link" data-act="copy" data-a="${esc(s.dustAddress)}">コピー</button><div class="xs">dust-designate.cmd に渡すアドレスです</div>` : '取得できません'], ['証明', esc(s.proofMode)]]) : '<div class="box box-warn">Lace に接続されていません</div>'}
+    ${s ? kvs([['ウォレット', `${esc(s.name)} ／ ${esc(s.networkId)}`], ['アドレス', `<span class="mono" style="word-break:break-all">${esc(s.unshieldedAddress)}</span>`], ['DUST', `${s.dustBalance === undefined ? '不明' : num(s.dustBalance)}${s.dustCap !== undefined ? ` ／ 上限 ${num(s.dustCap)}` : ''}`], ['DUST アドレス', s.dustAddress ? `<span class="mono" style="word-break:break-all">${esc(s.dustAddress)}</span> <button class="link" data-act="copy" data-a="${esc(s.dustAddress)}">コピー</button><div class="xs">dust-designate.cmd に渡すアドレスです</div>` : '取得できません'], ['証明', esc(s.proofMode)]]) : '<div class="box box-warn">ウォレットに接続されていません</div>'}
     <div class="xs" style="font-weight:700;color:var(--navy);margin:14px 0 6px">2. ${who(id)} の口座鍵</div>
     ${isHolder(id) ? kvs([['口座ID（チェーンに記録）', `<span class="mono" style="word-break:break-all">${KEYS[id].id}</span>`], ['口座鍵（秘密鍵）', 'このブラウザの localStorage に保存（チェーンには出ない）'], ['状態', acctState(id)]]) : '<div class="box box-mute">このユーザーはオンチェーンの口座を持ちません（Pactora 上のオフチェーン操作のみ）</div>'}
-    <div class="box box-mute" style="margin-top:10px;font-size:calc(11.5px + var(--fs))">Midnight では、手数料（DUST）の支払いと操作の権限を別の鍵で扱えます。このデモでは手数料はすべて接続中の Lace が支払い、権限・所有は各ユーザーの口座鍵でゼロ知識証明します。</div></div>
-    <div class="dlg-f"><button class="btn gh" style="margin-right:auto" data-act="keysExport">口座鍵のエクスポート</button>${s ? '<button class="btn gh" data-act="dustRefresh">DUST を再取得</button>' : '<button class="btn" data-act="connect">Lace に接続</button>'}<button class="btn" data-act="closeModal">閉じる</button></div>`, true);
+    <div class="box box-mute" style="margin-top:10px;font-size:calc(11.5px + var(--fs))">Midnight では、手数料（DUST）の支払いと操作の権限を別の鍵で扱えます。このデモでは手数料はすべて接続中のウォレットが支払い、権限・所有は各ユーザーの口座鍵でゼロ知識証明します。</div></div>
+    <div class="dlg-f"><button class="btn gh" style="margin-right:auto" data-act="keysExport">口座鍵のエクスポート</button>${s ? '<button class="btn gh" data-act="dustRefresh">DUST を再取得</button>' : '<button class="btn" data-act="connect">ウォレットに接続</button>'}<button class="btn" data-act="closeModal">閉じる</button></div>`, true);
 };
 A.keysExport = () => {
   const json = JSON.stringify({ contract: S.contract, keys: Object.fromEntries(HOLDERS.map((h) => [h, KEYS[h].sk])) }, null, 1);
@@ -868,7 +868,7 @@ A.join = () => {
 A.deploy = () => {
   const f = U().form, name = (f.tkName ?? TOKEN_DEFAULT.name).trim(), sym = (f.tkSym ?? TOKEN_DEFAULT.sym).trim();
   if (!name || !sym) { toast('トークン名とシンボルを入力してください', 'ng'); return; }
-  if (!SESSION) { toast('先に Lace に接続してください', 'ng'); return; }
+  if (!SESSION) { toast('先にウォレットに接続してください', 'ng'); return; }
   txSign({ op: '預金トークンの提供開始（コントラクトのデプロイ）', rows: [['トークン', `${esc(name)}（${esc(sym)}）`], ['発行体', who('bank')]], signer: 'bank' },
     [{ label: 'デプロイ', needContract: false, run: async () => { const a = await TDepositAPI.deploy(SESSION!.providers, skOf('bank'), name, sym); useApi(a); S.token = { name, sym }; return { txId: '', txHash: a.deployTx.txHash, blockHeight: a.deployTx.blockHeight ?? 0 }; } }],
     ([r]) => { addEvent('提供開始（デプロイ）', `${esc(sym)}（Midnight）`, '成功', txOf(r), r.blockHeight); done('預金トークンの提供を開始しました', `コントラクト <span class="mono">${esc(short(S.contract || '', 10))}</span>`); });
@@ -1101,6 +1101,6 @@ export function start() {
   });
   U().pop = null;
   render();
-  // ログイン後の画面で再読み込みした場合は、Lace とコントラクトに自動で再接続する
+  // ログイン後の画面で再読み込みした場合は、ウォレットとコントラクトに自動で再接続する
   if (U().screen === 'app') autoConnect();
 }

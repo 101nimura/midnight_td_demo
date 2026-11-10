@@ -25,11 +25,15 @@ export default defineConfig({
       '@midnight-ntwrk/onchain-runtime-v3',
       '@midnight-ntwrk/onchain-runtime-v3/midnight_onchain_runtime_wasm_bg.wasm',
       '@midnight-ntwrk/onchain-runtime-v3/midnight_onchain_runtime_wasm.js',
+      '@midnightntwrk/onchain-runtime-v4',
+      '@midnightntwrk/ledger-v9',
     ],
   },
   resolve: {
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.wasm'],
     mainFields: ['browser', 'module', 'main'],
+    // WASM を含むパッケージが二重に読み込まれると instanceof が失敗するため 1 つにまとめる（midnight-js docs/guides/vite-wasm-resolution.md）
+    dedupe: ['@midnight-ntwrk/compact-runtime', '@midnightntwrk/onchain-runtime-v4', '@midnightntwrk/ledger-v9', '@midnight-ntwrk/onchain-runtime-v3'],
   },
   checks: { importIsUndefined: false },
   // /mnt/c 上のファイルは WSL から inotify で検知できないためポーリング監視にする

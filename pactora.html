@@ -18,6 +18,21 @@
     </div>
     <div class="ov" id="ov"><div class="dlg" id="dlg"></div></div>
     <div id="toast"></div>
+    <script>
+      // 起動中のエラーを画面に出す（真っ白のままにしない）
+      (function () {
+        var show = function (msg) {
+          var r = document.getElementById('root');
+          if (!r || r.childElementCount > 0) return;
+          r.innerHTML = '<div style="max-width:900px;margin:60px auto;padding:20px;border:1px solid #e0a3a8;background:#fbf0f1;color:#b4323a;font:13px/1.6 sans-serif;white-space:pre-wrap;word-break:break-all"><b>デモの起動に失敗しました</b>\n' + String(msg).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) + '</div>';
+        };
+        var logs = []; window.__bootLog = logs;
+        ['error', 'warn'].forEach(function (k) { var o = console[k]; console[k] = function () { try { logs.push(k + ': ' + Array.prototype.map.call(arguments, function (a) { return a && a.stack ? a.stack : String(a); }).join(' ')); } catch (_) {} return o.apply(console, arguments); }; });
+        window.addEventListener('error', function (e) { show((e.error && e.error.stack) || e.message); });
+        window.addEventListener('unhandledrejection', function (e) { show((e.reason && e.reason.stack) || e.reason); });
+        setTimeout(function () { show('60 秒たっても画面が表示されません（起動の段階: ' + (window.__bootStage || 'スクリプト未実行') + '）。F12 のコンソールを確認してください。\n' + logs.slice(-8).join('\n')); }, 60000);
+      })();
+    </script>
     <script type="module" src="/src/pactora/main.ts"></script>
   </body>
 </html>

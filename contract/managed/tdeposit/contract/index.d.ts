@@ -24,50 +24,50 @@ export type Witnesses<PS> = {
 
 export type ImpureCircuits<PS> = {
   registerAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   issue(context: __compactRuntime.CircuitContext<PS>,
         dst_0: Uint8Array,
-        amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+        amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceTransfer(context: __compactRuntime.CircuitContext<PS>,
                 src_0: Uint8Array,
                 dst_0: Uint8Array,
-                amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+                amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceRedeem(context: __compactRuntime.CircuitContext<PS>,
               src_0: Uint8Array,
-              amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+              amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   unfreezeAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
-  pause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
-  unpause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  pause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  unpause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
   transfer(context: __compactRuntime.CircuitContext<PS>,
            dst_0: Uint8Array,
-           amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+           amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
 }
 
 export type ProvableCircuits<PS> = {
   registerAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   issue(context: __compactRuntime.CircuitContext<PS>,
         dst_0: Uint8Array,
-        amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+        amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceTransfer(context: __compactRuntime.CircuitContext<PS>,
                 src_0: Uint8Array,
                 dst_0: Uint8Array,
-                amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+                amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceRedeem(context: __compactRuntime.CircuitContext<PS>,
               src_0: Uint8Array,
-              amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+              amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   unfreezeAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
-  pause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
-  unpause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  pause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  unpause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
   transfer(context: __compactRuntime.CircuitContext<PS>,
            dst_0: Uint8Array,
-           amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+           amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
 }
 
 export type PureCircuits = {
@@ -75,28 +75,28 @@ export type PureCircuits = {
 }
 
 export type Circuits<PS> = {
-  accountId(context: __compactRuntime.CircuitContext<PS>, sk_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  accountId(context: __compactRuntime.CircuitContext<PS>, sk_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, Uint8Array>>;
   registerAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   issue(context: __compactRuntime.CircuitContext<PS>,
         dst_0: Uint8Array,
-        amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+        amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceTransfer(context: __compactRuntime.CircuitContext<PS>,
                 src_0: Uint8Array,
                 dst_0: Uint8Array,
-                amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+                amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
   forceRedeem(context: __compactRuntime.CircuitContext<PS>,
               src_0: Uint8Array,
-              amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+              amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  freezeAccount(context: __compactRuntime.CircuitContext<PS>, acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
   unfreezeAccount(context: __compactRuntime.CircuitContext<PS>,
-                  acct_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
-  pause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
-  unpause(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+                  acct_0: Uint8Array): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  pause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  unpause(context: __compactRuntime.CircuitContext<PS>): Promise<__compactRuntime.CircuitResults<PS, []>>;
   transfer(context: __compactRuntime.CircuitContext<PS>,
            dst_0: Uint8Array,
-           amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
-  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+           amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
+  redeem(context: __compactRuntime.CircuitContext<PS>, amount_0: bigint): Promise<__compactRuntime.CircuitResults<PS, []>>;
 }
 
 export type Ledger = {
@@ -138,10 +138,6 @@ export type Ledger = {
   };
 }
 
-export type ContractReferenceLocations = any;
-
-export declare const contractReferenceLocations : ContractReferenceLocations;
-
 export declare class Contract<PS = any, W extends Witnesses<PS> = Witnesses<PS>> {
   witnesses: W;
   circuits: Circuits<PS>;
@@ -150,8 +146,11 @@ export declare class Contract<PS = any, W extends Witnesses<PS> = Witnesses<PS>>
   constructor(witnesses: W);
   initialState(context: __compactRuntime.ConstructorContext<PS>,
                name_0: string,
-               symbol_0: string): __compactRuntime.ConstructorResult<PS>;
+               symbol_0: string): Promise<__compactRuntime.ConstructorResult<PS>>;
 }
 
 export declare function ledger(state: __compactRuntime.StateValue | __compactRuntime.ChargedState): Ledger;
 export declare const pureCircuits: PureCircuits;
+export declare const expectedVk: Record<string, string>;
+export declare const circuitSignatures: __compactRuntime.CircuitSignatures;
+export declare const declaredInterfaces: __compactRuntime.DeclaredInterfaces;

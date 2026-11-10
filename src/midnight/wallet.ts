@@ -1,25 +1,25 @@
 /**
- * Lace ウォレット（DApp Connector API v4）への接続と midnight-js プロバイダ構築
+ * Midnight ウォレット（DApp Connector API v4：1AM / Lace）への接続と midnight-js 5.0.0（ledger 9）のプロバイダ構築
+ *
+ *  - 手数料の支払い・送信: ウォレットに委譲（dappConnectorWalletProviders）
+ *  - 証明の生成: ウォレットに委譲（dappConnectorProofProvider）。非対応なら Proof Server を直接使う
+ *  - チェーンの状態の読み取り: 公式の Preview インデクサに固定（ウォレットの接続先に左右されないように。ISSUES.md #36）
+ *  - ZK 鍵・ZKIR: HTML と同じ場所の keys/ zkir/ compiler/ から取得（ledger 9 の鍵は大きく HTML に埋め込めない。ISSUES.md #38）
  */
-import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
-import '@midnight-ntwrk/dapp-connector-api';
+import type { ConnectedAPI, InitialAPI } from '@midnightntwrk/dapp-connector-api';
+import '@midnightntwrk/dapp-connector-api';
+import {
+  dappConnectorProofProvider,
+  dappConnectorWalletProviders,
+} from '@midnight-ntwrk/midnight-js-dapp-connector-proof-provider';
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
-import { createProofProvider, type MidnightProviders, type UnboundTransaction } from '@midnight-ntwrk/midnight-js-types';
-import {
-  type Binding,
-  type FinalizedTransaction,
-  type Proof,
-  type SignatureEnabled,
-  Transaction,
-  type TransactionId,
-} from '@midnight-ntwrk/midnight-js-protocol/ledger';
-import { fromHex, toHex } from '@midnight-ntwrk/compact-runtime';
+import { CostModel } from '@midnight-ntwrk/midnight-js-protocol/v9';
+import type { MidnightProviders, ProofProvider } from '@midnight-ntwrk/midnight-js-types';
 import semver from 'semver';
 import type { TDepositCircuitKeys, TDepositPrivateState } from '../contract';
 import { inMemoryPrivateStateProvider } from './privateState';
-import { EmbeddedZkConfigProvider } from './embeddedZk';
 
 export const PRIVATE_STATE_ID = 'tdepositPrivateState';
 export type PrivateStateId = typeof PRIVATE_STATE_ID;
@@ -27,6 +27,13 @@ export type TDepositProviders = MidnightProviders<TDepositCircuitKeys, PrivateSt
 
 export const NETWORK_ID = (import.meta.env.VITE_NETWORK_ID as string) || 'preview';
 const COMPATIBLE_API = '4.x';
+
+/** 公式の Preview インデクサ（2026-11-07 の再起動後のチェーン。トークン不要） */
+export const INDEXER_URI = (import.meta.env.VITE_INDEXER_URI as string) || 'https://indexer.preview.midnight.network/api/v4/graphql';
+export const INDEXER_WS_URI = (import.meta.env.VITE_INDEXER_WS_URI as string) || 'wss://indexer.preview.midnight.network/api/v4/graphql/ws';
+
+/** ウォレットの優先順（window.midnight のキー or name）。Lace の Preview の接続先が古いチェーンのままのため、1AM を優先する */
+const WALLET_PREFERENCE = ['1am', 'lace'];
 
 export type WalletInfo = {
   name: string;
@@ -48,7 +55,7 @@ export type Session = {
   info: WalletInfo;
 };
 
-/** window.midnight に注入されたウォレットから v4 互換のもの（Lace を優先）を探す */
+/** window.midnight に注入されたウォレットから v4 互換のもの（WALLET_PREFERENCE の順）を探す */
 export const findWallets = (): InitialAPI[] => {
   const m = window.midnight;
   if (!m) return [];
@@ -92,9 +99,9 @@ const walletDiagnosis = (): string => {
   if (!m || Object.keys(m).length === 0) {
     const hint =
       window.location.protocol === 'file:'
-        ? 'file:// で開いています。Lace のバージョンによっては、「ファイルの URL へのアクセスを許可する」を ON にしても file:// のページには組み込まれません。start-pactora.cmd（http://localhost:8081）/ start-single.cmd（http://localhost:8080）で開いてください。'
-        : 'Lace がこのページに組み込まれていません（window.midnight がありません）。拡張機能の管理 → Lace の「詳細」→「サイトへのアクセス」が「すべてのサイト」になっているか（特定のサイトだけを許可している場合は、この URL を追加）確認し、ページを再読み込みしてください。Lace を入れた・有効にした直後も再読み込みが必要です。';
-    return `Midnight 対応の Lace ウォレットが見つかりません。${hint}（${where}）`;
+        ? 'file:// で開いています。ウォレットのバージョンによっては、「ファイルの URL へのアクセスを許可する」を ON にしても file:// のページには組み込まれません。start-pactora.cmd（http://localhost:8081）/ start-single.cmd（http://localhost:8080）で開いてください。'
+        : 'Midnight のウォレット（1AM / Lace）がこのページに組み込まれていません（window.midnight がありません）。拡張機能の管理 → ウォレットの「詳細」→「サイトへのアクセス」が「すべてのサイト」になっているか（特定のサイトだけを許可している場合は、この URL を追加）確認し、ページを再読み込みしてください。ウォレットを入れた・有効にした直後も再読み込みが必要です。';
+    return `Midnight 対応のウォレット（1AM / Lace）が見つかりません。${hint}（${where}）`;
   }
   const found = Object.entries(m)
     .map(([k, w]) => {
@@ -102,15 +109,18 @@ const walletDiagnosis = (): string => {
       return `${k}（name=${String(x.name ?? '?')}, apiVersion=${String(x.apiVersion ?? '?')}）`;
     })
     .join(' / ');
-  return `Midnight のウォレットは見つかりましたが、このデモが対応する DApp Connector API ${COMPATIBLE_API} ではありません。見つかったウォレット: ${found}。Lace のバージョンを確認してください（${where}）`;
+  return `Midnight のウォレットは見つかりましたが、このデモが対応する DApp Connector API ${COMPATIBLE_API} ではありません。見つかったウォレット: ${found}。ウォレットのバージョンを確認してください（${where}）`;
 };
 
 const waitForWallet = async (timeoutMs = 10000): Promise<InitialAPI> => {
   const started = Date.now();
   for (;;) {
     const wallets = findWallets();
-    const lace = wallets.find((w) => /lace/i.test(w.name) || /lace/i.test(w.rdns)) ?? wallets[0];
-    if (lace) return lace;
+    const pick =
+      WALLET_PREFERENCE.map((p) => wallets.find((w) => w.name.toLowerCase().includes(p) || String(w.rdns).toLowerCase().includes(p))).find(
+        Boolean,
+      ) ?? wallets[0];
+    if (pick) return pick;
     if (Date.now() - started > timeoutMs) throw new Error(walletDiagnosis());
     await new Promise((r) => setTimeout(r, 100));
   }
@@ -123,79 +133,73 @@ export const connectWallet = async (log: (msg: string) => void): Promise<Session
   const status = await api.getConnectionStatus();
   if (status.status !== 'connected') throw new Error('ウォレットとの接続が確立できませんでした');
   if (status.networkId !== NETWORK_ID) {
-    throw new Error(`ウォレットのネットワーク (${status.networkId}) が ${NETWORK_ID} ではありません。Lace の設定で Preview を選択してください。`);
+    throw new Error(`ウォレットのネットワーク (${status.networkId}) が ${NETWORK_ID} ではありません。ウォレットの設定で Preview を選択してください。`);
   }
   const config = await api.getConfiguration();
   log(
-    `Lace の設定: node=${config.substrateNodeUri} / indexer=${config.indexerUri} / 証明サーバー=${config.proverServerUri ?? "（Lace は公開していません：Lace の 設定 → Midnight で確認してください）"}`,
+    `${initial.name} の設定: node=${config.substrateNodeUri} / indexer=${config.indexerUri} / 証明サーバー=${config.proverServerUri ?? '（ウォレットは公開していません）'}`,
   );
+  log(`チェーンの状態の読み取り: ${INDEXER_URI}（公式の Preview インデクサに固定）`);
   const shielded = await api.getShieldedAddresses();
   const { unshieldedAddress } = await api.getUnshieldedAddress();
 
-  // ZK 鍵・ZKIR: 単一 HTML 版は HTML に埋め込み済みのデータ、開発サーバ版は public/keys, public/zkir から取得
-  const zkConfigProvider = import.meta.env.VITE_EMBED_ZK
-    ? new EmbeddedZkConfigProvider<TDepositCircuitKeys>()
-    : new FetchZkConfigProvider<TDepositCircuitKeys>(window.location.origin, fetch.bind(window));
+  // ZK 鍵・ZKIR・マニフェスト: このページと同じ場所の keys/ zkir/ compiler/ から取得（マニフェストで改ざんを検証）
+  const zkBase = new URL('.', window.location.href).href;
+  const zkConfigProvider = new FetchZkConfigProvider<TDepositCircuitKeys>(zkBase, { fetchFunc: fetch.bind(window) });
 
-  // 証明生成: 既定は Lace に委譲（Lace で設定された Proof Server を使用）
-  //           VITE_PROOF_SERVER を指定した場合はその Proof Server を直接使用
-  let proofProvider;
+  // 証明生成: 既定はウォレットに委譲。VITE_PROOF_SERVER を指定した場合、またはウォレットが非対応の場合は Proof Server を直接使用
+  let proofProvider: ProofProvider;
   let proofMode: string;
   const forced = import.meta.env.VITE_PROOF_SERVER as string | undefined;
   if (forced) {
-    proofProvider = httpClientProofProvider(forced, zkConfigProvider);
+    proofProvider = httpClientProofProvider({ url: forced, zkConfigProvider });
     proofMode = `Proof Server 直接 (${forced})`;
   } else {
     try {
-      const provingProvider = await api.getProvingProvider(zkConfigProvider);
-      proofProvider = createProofProvider(provingProvider);
-      proofMode = 'Lace ウォレットに委譲';
+      proofProvider = await dappConnectorProofProvider(api, zkConfigProvider, CostModel.initialCostModel());
+      proofMode = `${initial.name} に委譲`;
     } catch (e) {
       const uri = config.proverServerUri ?? 'http://localhost:6300';
-      log(`getProvingProvider 非対応のため Proof Server を直接使用します: ${uri} (${String(e)})`);
-      proofProvider = httpClientProofProvider(uri, zkConfigProvider);
+      log(`ウォレットの証明生成が使えないため Proof Server を直接使用します: ${uri} (${describeError(e)})`);
+      proofProvider = httpClientProofProvider({ url: uri, zkConfigProvider });
       proofMode = `Proof Server 直接 (${uri})`;
     }
   }
+
+  // 手数料の支払い・送信はウォレットに委譲。進み具合のログと、エラーの中身を出すために API を包む
+  const walletName = initial.name;
+  const { walletProvider, midnightProvider } = await dappConnectorWalletProviders({
+    getShieldedAddresses: () => api.getShieldedAddresses(),
+    balanceUnsealedTransaction: async (tx, options) => {
+      log(`${walletName} でトランザクションを承認してください（手数料 DUST の支払い）…`);
+      try {
+        const r = await api.balanceUnsealedTransaction(tx, options);
+        log(`${walletName} の承認が完了しました`);
+        return r;
+      } catch (e) {
+        console.error('balanceUnsealedTransaction failed', e);
+        throw new Error(`${walletName} での手数料の支払い（balanceUnsealedTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
+      }
+    },
+    submitTransaction: async (tx) => {
+      log('トランザクションを送信中…');
+      try {
+        await api.submitTransaction(tx);
+      } catch (e) {
+        console.error('submitTransaction failed', e);
+        throw new Error(`トランザクションの送信（submitTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
+      }
+    },
+  });
 
   const providers: TDepositProviders = {
     privateStateProvider: inMemoryPrivateStateProvider<PrivateStateId, TDepositPrivateState>(),
     zkConfigProvider,
     proofProvider,
-    publicDataProvider: indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, window.WebSocket),
-    walletProvider: {
-      getCoinPublicKey: () => shielded.shieldedCoinPublicKey,
-      getEncryptionPublicKey: () => shielded.shieldedEncryptionPublicKey,
-      balanceTx: async (tx: UnboundTransaction): Promise<FinalizedTransaction> => {
-        log('Lace でトランザクションを承認してください（手数料 DUST の支払い）…');
-        let res: { tx: string };
-        try {
-          res = await api.balanceUnsealedTransaction(toHex(tx.serialize()));
-        } catch (e) {
-          console.error('balanceUnsealedTransaction failed', e);
-          throw new Error(`Lace での手数料の支払い（balanceUnsealedTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
-        }
-        log('Lace の承認が完了しました');
-        try {
-          return Transaction.deserialize<SignatureEnabled, Proof, Binding>('signature', 'proof', 'binding', fromHex(res.tx));
-        } catch (e) {
-          console.error('Transaction.deserialize failed', e);
-          throw new Error(`Lace が返したトランザクションを読み込めませんでした（ledger の形式の不一致の可能性）: ${describeError(e)}`, { cause: e });
-        }
-      },
-    },
-    midnightProvider: {
-      submitTx: async (tx: FinalizedTransaction): Promise<TransactionId> => {
-        log('トランザクションを送信中…');
-        try {
-          await api.submitTransaction(toHex(tx.serialize()));
-        } catch (e) {
-          console.error('submitTransaction failed', e);
-          throw new Error(`トランザクションの送信（submitTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
-        }
-        return tx.identifiers()[0];
-      },
-    },
+    publicDataProvider: indexerPublicDataProvider({ queryURL: INDEXER_URI, subscriptionURL: INDEXER_WS_URI, webSocket: window.WebSocket }),
+    walletProvider,
+    midnightProvider,
+    config: { networkId: NETWORK_ID, ttlSeconds: 3600 },
   };
 
   const info: WalletInfo = {
@@ -204,14 +208,14 @@ export const connectWallet = async (log: (msg: string) => void): Promise<Session
     networkId: status.networkId,
     unshieldedAddress,
     shieldedAddress: shielded.shieldedAddress,
-    indexerUri: config.indexerUri,
+    indexerUri: INDEXER_URI,
     proofMode,
   };
   Object.assign(info, await readWalletStatus(api, log));
   return { api, providers, info };
 };
 
-/** DUST 残高・DUST アドレス・NIGHT 残高を取得（Lace の画面に DUST が表示されない場合の診断用） */
+/** DUST 残高・DUST アドレス・NIGHT 残高を取得（ウォレットの画面に DUST が表示されない場合の診断用） */
 export const readWalletStatus = async (
   api: ConnectedAPI,
   log: (msg: string) => void,

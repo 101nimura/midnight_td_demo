@@ -5,36 +5,42 @@
   "type": "module",
   "description": "Midnight (Preview) tokenized deposit demo with Lace wallet",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "scripts": {
     "compact": "compact compile contract/tdeposit.compact contract/managed/tdeposit",
     "compact:fast": "compact compile --skip-zk contract/tdeposit.compact contract/managed/tdeposit",
-    "copy-keys": "mkdir -p public && rm -rf public/keys public/zkir && cp -r contract/managed/tdeposit/keys public/keys && cp -r contract/managed/tdeposit/zkir public/zkir",
+    "copy-keys": "mkdir -p public && rm -rf public/keys public/zkir && cp -r contract/managed/tdeposit/keys public/keys && cp -r contract/managed/tdeposit/zkir public/zkir && rm -rf public/compiler && cp -r contract/managed/tdeposit/compiler public/compiler",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "npm run copy-keys && vite --host",
     "build": "npm run copy-keys && tsc --noEmit && vite build",
     "start": "vite preview --host",
     "build:single": "tsc --noEmit && vite build --config vite.single.config.ts --mode single && mv dist-single/index.html dist-single/tdeposit-demo.html",
-    "build:pactora": "tsc --noEmit && vite build --config vite.pactora.config.ts --mode single && mv dist-pactora/pactora.html dist-pactora/pactora-tdeposit-demo.html"
+    "build:pactora": "npm run copy-keys && tsc --noEmit && vite build --config vite.pactora.config.ts && mv dist-pactora/pactora.html dist-pactora/pactora-tdeposit-demo.html"
   },
   "dependencies": {
-    "@midnight-ntwrk/compact-runtime": "0.16.0",
-    "@midnight-ntwrk/dapp-connector-api": "4.0.1",
-    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
-    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
-    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
-    "@midnight-ntwrk/midnight-js-types": "4.1.1",
-    "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+    "@midnight-ntwrk/compact-runtime": "0.21.0",
+    "@midnight-ntwrk/midnight-js-contracts": "5.0.0",
+    "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider": "5.0.0",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "5.0.0",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "5.0.0",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.0",
+    "@midnight-ntwrk/midnight-js-protocol": "5.0.0",
+    "@midnight-ntwrk/midnight-js-types": "5.0.0",
+    "@midnight-ntwrk/midnight-js-utils": "5.0.0",
+    "@midnightntwrk/dapp-connector-api": "4.1.0",
     "buffer": "^6.0.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "rxjs": "^7.8.2",
     "semver": "^7.7.3"
+  },
+  "overrides": {
+    "@midnightntwrk/ledger-v9": "1.0.0",
+    "@midnightntwrk/onchain-runtime-v4": "4.0.0",
+    "@midnight-ntwrk/platform-js": "3.0.0",
+    "@midnight-ntwrk/onchain-runtime-v3": "3.1.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.7",

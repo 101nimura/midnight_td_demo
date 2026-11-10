@@ -287,3 +287,24 @@
 - Lace の Preview の接続先（Blockfrost）は、古いチェーンのノードが止まったまま（ブロック高 `0x18e171` から進まない）で、インデクサは 500 を返す（#36）。Lace の接続先は利用者が変更できない。
 - 結果: **ウォレットを替えても、デモ一式を ledger 9 に上げない限り、新しい Preview では動かない**。11/2 に動いていたデモが、コードを何も変えずに 1 週間で動かなくなった。
 - 示唆: C4（ネットワーク更新に伴う互換性の破壊と台帳の継続性）が、実際に起きた。テストネットでも、SDK 一式の追随、コントラクトの再コンパイル、再デプロイ、資金（tNIGHT・DUST）の再取得が必要になる。本番では、更新の予告と移行期間、移行用の回路（残高の移管）が欠かせない。
+
+## 38. [技術] ledger 9（midnight-js 5.0.0 / compactc 0.36）への移行作業
+
+- 2026-11-10 に、デモ一式を Preview の対応表（docs.midnight.network）に合わせて更新した: コンパイラ 0.36.0、compact-runtime 0.21.0、midnight-js 5.0.0、DApp Connector API 4.1.0、Proof Server 9.0.0。
+- **コントラクトのソースは無修正**で 0.36.0 でコンパイルできた。シミュレータのテスト 9 件もすべて成功した。ただし、テストのコードは書き直しが必要だった（コンストラクタ・回路の実行が非同期になり、`CircuitContext` の形が変わった）。
+- 変更が必要だった主な点（midnight-js の v5.0.0 移行ガイドの Step 1〜13）:
+  - `@midnight-ntwrk/midnight-js-network-id`（`setNetworkId`）の廃止 → プロバイダの `config: { networkId, ttlSeconds }`
+  - ledger の import パスが `…/v9` に変わった。DApp Connector API と ledger のパッケージのスコープが `@midnightntwrk/*`（ハイフンなし）に変わった
+  - チェーンの状態がバイト列 + era で届くため、自分の runtime で復号する（`deserialize({ v9: ContractState })`）。状態のストリームは `record.value`
+  - プライベートステートがコントラクトごとのビュー（`forContract`）になった
+  - ウォレットとの接続は、公式のアダプタ（`dappConnectorWalletProviders` / `dappConnectorProofProvider`）に置き換えた
+  - ZK 鍵はマニフェスト（`compiler/contract-manifest.json`）で改ざんの検証を受けるため、`compiler/` ディレクトリも配信する
+  - WASM のパッケージは、二重に読み込まれると壊れるため、バージョンの固定（`overrides`）と Vite の `resolve.dedupe` が必要
+- **ZK 鍵のサイズ**: ZKIR v3 になり、証明鍵が 1 回路約 2.8MB → **約 11MB**、10 回路で約 27MB → **約 108MB** になった（M4）。
+- **単一 HTML をやめた**:
+  - 鍵を埋め込むと HTML が 150MB を超え、GitHub の 1 ファイルの上限（100MB）を超える。
+  - 鍵を外に出し、JS と WASM だけを埋め込んだ HTML（34MB）は、**モジュールの読み込みが終わらず、エラーも出ずに画面が真っ白のまま**になった（開発サーバーでは正常）。ledger 8 と 9 の両方の WASM を含むようになったことが関係していると考えられる。原因は特定していない。
+  - 通常のビルド（HTML + `assets/` + `keys/ zkir/ compiler/`）に切り替え、GitHub Pages は Actions でビルドして公開する形にした。起動中のエラーや停止を画面に出す仕組みも追加した。
+- ウォレットは 1AM を優先する。DApp Connector の共通の API で接続するため、コードはウォレットに依存しない（Lace でも動く）。チェーンの状態の読み取りは、ウォレットの接続先ではなく公式の Preview インデクサに固定した（#36）。
+- `tools/dust`（DUST 生成の代替ツール）は testkit-js 4.x（ledger 8）のままで、今の Preview では使えない。1AM で DUST を用意できれば不要。
+- 示唆: SDK のメジャー更新では、API（状態の取得、プライベートステート、プロバイダの組み立て）、配布物（鍵のサイズ・マニフェスト）、ビルドの構成がまとめて変わる。テストネットでもこの規模の改修が年に数回起こりうる前提で、体制と予算を見込む必要がある（C4, M5）。

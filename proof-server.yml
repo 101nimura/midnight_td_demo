@@ -1,4 +1,4 @@
-# ローカル Proof Server（ledger v8 対応版。midnight-js 4.1.1 と組み合わせる）
+# ローカル Proof Server（ledger 9 対応版。midnight-js 5.0.0 / compactc 0.36.0 と組み合わせる（Preview の対応表））
 #   docker compose -f proof-server.yml up -d   → http://localhost:6300
 #
 # 社内ネットワークの TLS 検査（Netskope）対策:
@@ -6,7 +6,7 @@
 #   CA バンドル（certs/ca-bundle.crt）をコンテナに渡している。作成方法は docs/ISSUES.md #20 参照。
 services:
   proof-server:
-    image: midnightntwrk/proof-server:8.0.3
+    image: midnightntwrk/proof-server:9.0.0
     command: ['midnight-proof-server', '-v']
     ports:
       - '6300:6300'

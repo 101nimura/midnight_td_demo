@@ -4,7 +4,7 @@
  *  - ウィットネス（秘密鍵の供給）
  *  - midnight-js 用の CompiledContract 定義
  */
-import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
+import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/v9/compact-js';
 import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 import * as TDeposit from '../../contract/managed/tdeposit/contract/index.js';
 

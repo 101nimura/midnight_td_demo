@@ -2,7 +2,7 @@
  * トークン化預金コントラクトの操作 API（デプロイ / 参加 / 回路呼び出し / 状態購読）
  */
 import { deployContract, findDeployedContract, type FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
-import { toHex } from '@midnight-ntwrk/compact-runtime';
+import { ContractState, toHex } from '@midnight-ntwrk/compact-runtime';
 import { map, type Observable } from 'rxjs';
 import { CompiledTDepositContract, ledger, OpKind, type TDepositContract } from '../contract';
 import { PRIVATE_STATE_ID, type TDepositProviders } from './wallet';
@@ -52,7 +52,8 @@ export class TDepositAPI {
     this.deployTx = { txHash: pub.txHash === undefined ? '' : String(pub.txHash), blockHeight: pub.blockHeight };
     this.state$ = providers.publicDataProvider
       .contractStateObservable(this.address, { type: 'latest' })
-      .pipe(map((cs) => toView(ledger(cs.data))));
+      // midnight-js 5.0.0: 状態はバイト列 + era で届くので、このコントラクトの runtime（0.21）で復号する
+      .pipe(map((record) => toView(ledger(record.value.contractState.deserialize({ v9: ContractState }).data))));
   }
 
   /** 新規デプロイ（デプロイした口座鍵が発行体＝銀行になる） */
@@ -84,8 +85,7 @@ export class TDepositAPI {
 
   /** 操作する口座鍵をプライベートステートに設定（ウィットネスが参照する） */
   private async actAs(secretKey: Uint8Array) {
-    this.providers.privateStateProvider.setContractAddress(this.address);
-    await this.providers.privateStateProvider.set(PRIVATE_STATE_ID, { secretKey });
+    await this.providers.privateStateProvider.forContract(this.address).set(PRIVATE_STATE_ID, { secretKey });
   }
 
   private async run(

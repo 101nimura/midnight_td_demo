@@ -1,14 +1,24 @@
-# Pactora UI 版の単一 HTML（dist-pactora/pactora-tdeposit-demo.html）だけを GitHub Pages に公開する
+# Pactora UI 版（dist-pactora/）を GitHub Actions でビルドし、GitHub Pages に公開する
 #   公開 URL: https://<ユーザー名>.github.io/<リポジトリ名>/
 #   事前設定: リポジトリの Settings → Pages → Source を「GitHub Actions」にする
-#   ※ 以前公開していた旧版（dist-single/tdeposit-demo.html）は公開しない（リポジトリには残す）
-name: Deploy single HTML to GitHub Pages
+#
+#   ledger 9 への移行で、出力は「HTML + assets/（JS・WASM）+ keys/ zkir/ compiler/（ZK 鍵 約 108MB）」になった（ISSUES.md #38）。
+#   ビルド結果はコミットせず、ここでビルドする。ZK 鍵はコンパイル済みのもの（contract/managed/tdeposit）を使うので、
+#   Compact コンパイラは不要。ソースや docs は公開しない（dist-pactora の中身だけを公開）。
+name: Deploy Pactora demo to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'dist-pactora/pactora-tdeposit-demo.html'
+      - 'src/**'
+      - 'contract/managed/**'
+      - 'pactora.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'vite.pactora.config.ts'
+      - '.env'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -30,20 +40,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # HTML 1 枚だけを公開用フォルダに配置（ソースや docs は公開しない）
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (dist-pactora)
+        run: npm run build:pactora
+
       - name: Prepare site
         run: |
-          mkdir -p _site
-          cp dist-pactora/pactora-tdeposit-demo.html _site/index.html
-          cp dist-pactora/pactora-tdeposit-demo.html _site/pactora-tdeposit-demo.html
-          touch _site/.nojekyll
-          ls -la _site
+          cp dist-pactora/pactora-tdeposit-demo.html dist-pactora/index.html
+          rm -f dist-pactora/.gitkeep
+          touch dist-pactora/.nojekyll
+          du -sh dist-pactora/*
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: dist-pactora
 
       - id: deployment
         uses: actions/deploy-pages@v4

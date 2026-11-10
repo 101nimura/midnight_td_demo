@@ -1,24 +1,48 @@
-# トークン化預金デモ（Midnight Preview × Lace）
+# トークン化預金デモ（Midnight Preview × 1AM / Lace）
 
 Midnight ブロックチェーン上で、銀行が発行する **トークン化預金** の
 **発行・移転・償還・強制移転・強制償還・凍結・全体停止** を操作できるデモ DApp です。
 
 | 項目 | 内容 |
 |---|---|
-| ネットワーク | Midnight **Preview** |
-| ウォレット | **Lace**（Midnight 対応版、DApp Connector API v4） |
-| コントラクト | Compact 0.31.1（`contract/tdeposit.compact`） |
-| フロントエンド | React + Vite + midnight-js 4.1.1 |
-| 提供形態 | ① 開発サーバー版（`start-dev.cmd`） ② 単一 HTML 版（`dist-single/tdeposit-demo.html`） ③ Pactora UI 版（`dist-pactora/pactora-tdeposit-demo.html`。**GitHub Pages で公開中**: https://101nimura.github.io/midnight_td_demo/ ） |
+| ネットワーク | Midnight **Preview**（2026-11-07 に ledger 9 の新しいチェーンとして再起動） |
+| ウォレット | **1AM**（推奨）または Lace（Midnight 対応版、DApp Connector API v4）。※Lace の Preview の接続先は 2026-11-10 時点で古いチェーンのまま（ISSUES.md #36） |
+| コントラクト | Compact コンパイラ 0.36.0 / compact-runtime 0.21.0（`contract/tdeposit.compact`） |
+| フロントエンド | Vite + midnight-js 5.0.0（ledger 9）、DApp Connector API 4.1.0 |
+| Proof Server | 9.0.0（`proof-server.yml`） |
+| 提供形態 | ① **Pactora UI 版**（`dist-pactora/`。**GitHub Pages で公開中**: https://101nimura.github.io/midnight_td_demo/ ） ② 開発サーバー版（`start-dev.cmd`） ※旧版の単一 HTML（`dist-single/tdeposit-demo.html`）は ledger 8 用で、今の Preview では動かない |
 
 取得: `git clone https://github.com/101nimura/midnight_td_demo.git`（環境構築は SETUP.md を参照）
 
 関連ドキュメント
 
-- 環境を一から作る手順: [`docs/SETUP.md`](docs/SETUP.md)（スライド版: `docs/SETUP.pptx`）
+- 環境を一から作る手順: [`docs/SETUP.md`](docs/SETUP.md)（スライド版: `docs/SETUP.pptx`）※2026-11-02 時点（ledger 8）の手順。バージョンは上の表を優先
 - Midnight でトークン化預金を実現する際の課題（重要度別の整理版）: [`docs/TOKENIZED_DEPOSIT_ISSUES.md`](docs/TOKENIZED_DEPOSIT_ISSUES.md)
 - デモ作成中に発生した問題・課題の記録（時系列）: [`docs/ISSUES.md`](docs/ISSUES.md)
 
+---
+
+## 0. 2026-11-10 の更新（ledger 9 対応）
+
+Preview の再起動（ledger 9）に合わせて、デモ一式を更新しました（ISSUES.md #35〜#38）。以下の章の「Lace」は、使うウォレット（1AM など）に読み替えてください。
+
+| 変更点 | 内容 |
+|---|---|
+| SDK | midnight-js 4.1.1 → **5.0.0**、compact-runtime 0.16.0 → **0.21.0**、コンパイラ 0.31.1 → **0.36.0**、DApp Connector API 4.0.1 → **4.1.0** |
+| Proof Server | 8.0.3 → **9.0.0**。`docker compose -f proof-server.yml up -d` で新しいイメージに入れ替わる（初回はパラメータの取得に数分） |
+| ウォレット | 1AM を優先して使う（両方入っている場合）。手数料の支払い・証明の生成はウォレットに委譲 |
+| チェーンの読み取り | 公式の Preview インデクサ（`indexer.preview.midnight.network`）に固定。ウォレットの接続先に左右されない |
+| 配布形態 | 単一 HTML をやめ、**フォルダ（HTML + assets/ + keys/ zkir/ compiler/）** で配信。ZK 鍵が約 108MB になり HTML に埋め込めないため（#38） |
+| GitHub Pages | GitHub Actions でビルドして公開（ビルド結果はコミットしない） |
+| 旧データ | 11/2 にデプロイしたコントラクト・tNIGHT・DUST は新しいチェーンにない。Faucet での再取得と、デプロイのやり直しが必要 |
+
+### デモの起動（毎回）
+
+1. Rancher Desktop を起動し「Running」を待つ → リポジトリのフォルダで `docker compose -f proof-server.yml up -d` → http://localhost:6300/version が **9.0.0**
+   （1AM はウォレット側の証明（Proof Station / WASM）を使えるため、Proof Server が不要な場合もあります）
+2. 1AM のネットワークが **Preview**、tNIGHT と **DUST が 0 より大きい** ことを確認（Faucet: https://faucet.preview.midnight.network/ ）
+3. https://101nimura.github.io/midnight_td_demo/ を開く（ローカルなら `build-pactora.cmd` → `start-pactora.cmd` → http://localhost:8081/pactora-tdeposit-demo.html ）
+4. S-1「業務 01 を始める」→ S-2「ウォレットに接続」→ ログイン → 左のガイドのステップ 1「提供を開始（デプロイ）」から順に進める
 ---
 
 ## 1. デモの概要
@@ -129,15 +153,15 @@ start-single.cmd
 > 初回は 55MB の読み込みと WASM の準備に十数秒かかります。画面が真っ暗なまま数秒たっても、そのまま待ってください。
 > 開いた URL（`localhost:5173` / `localhost:8080` / `file://`）ごとに、ブラウザの保存領域は別になります。口座鍵とコントラクトアドレスは引き継がれないので、同じコントラクトを使うには「既存コントラクトに接続」でアドレスを入力してください。
 
-### 3.3 Pactora UI 版（単一 HTML）
+### 3.3 Pactora UI 版
 
 画面と挙動を Pactora の画面モック（`pactora-phase2-usecase-mock.html` の業務 01 トークン化預金）に合わせた版です。コントラクトと Lace への接続は 3.1・3.2 と同じものを使います。
 
 | 項目 | 内容 |
 |---|---|
-| ファイル | `dist-pactora/pactora-tdeposit-demo.html`（約 55MB） |
+| ファイル | `dist-pactora/`（`pactora-tdeposit-demo.html` + `assets/`（JS・WASM 約 26MB）+ `keys/` `zkir/` `compiler/`（ZK 鍵 約 108MB））。フォルダごと配信する |
 | ビルド | `build-pactora.cmd`（= `npm run build:pactora`） |
-| 公開 URL | https://101nimura.github.io/midnight_td_demo/ （GitHub Pages。`dist-pactora/pactora-tdeposit-demo.html` を main に push すると自動で更新。`.github/workflows/pages.yml`） |
+| 公開 URL | https://101nimura.github.io/midnight_td_demo/ （GitHub Pages。src・contract/managed などを main に push すると、GitHub Actions がビルドして自動で更新。`.github/workflows/pages.yml`） |
 | 開き方（ローカル） | `start-pactora.cmd` → http://localhost:8081/pactora-tdeposit-demo.html（`file://` で直接開くと Lace が組み込まれないことがあるため、この方法を推奨） |
 | 開発サーバー | `start-dev.cmd` → http://localhost:5173/pactora.html |
 | ソース | `pactora.html`、`src/pactora/`（`app.ts` 画面と操作、`pactora.css` モックから流用した CSS） |
