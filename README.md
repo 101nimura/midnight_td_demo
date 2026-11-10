@@ -9,7 +9,7 @@ Midnight ブロックチェーン上で、銀行が発行する **トークン�
 | ウォレット | **Lace**（Midnight 対応版、DApp Connector API v4） |
 | コントラクト | Compact 0.31.1（`contract/tdeposit.compact`） |
 | フロントエンド | React + Vite + midnight-js 4.1.1 |
-| 提供形態 | ① 開発サーバー版（`start-dev.cmd`） ② 単一 HTML 版（`dist-single/tdeposit-demo.html`） |
+| 提供形態 | ① 開発サーバー版（`start-dev.cmd`） ② 単一 HTML 版（`dist-single/tdeposit-demo.html`） ③ Pactora UI 版（`dist-pactora/pactora-tdeposit-demo.html`。**GitHub Pages で公開中**: https://101nimura.github.io/midnight_td_demo/ ） |
 
 取得: `git clone https://github.com/101nimura/midnight_td_demo.git`（環境構築は SETUP.md を参照）
 
@@ -118,7 +118,9 @@ start-single.cmd
 
 → http://localhost:8080/tdeposit-demo.html を開きます（Windows の Python を使います）。
 
-**開き方 B: ファイルを直接開く**
+**開き方 B: ファイルを直接開く（非推奨）**
+
+> Lace のバージョンによっては、下の設定を ON にしても `file://` のページに組み込まれず、「Lace が見つかりません」になります（ISSUES.md #33）。その場合は開き方 A を使ってください。
 
 1. Chrome / Edge の拡張機能の管理画面 → Lace の「詳細」→ **「ファイルの URL へのアクセスを許可する」を ON** にします
    （OFF のままだと Lace がページに組み込まれず、「Lace が見つかりません」になります）
@@ -126,6 +128,37 @@ start-single.cmd
 
 > 初回は 55MB の読み込みと WASM の準備に十数秒かかります。画面が真っ暗なまま数秒たっても、そのまま待ってください。
 > 開いた URL（`localhost:5173` / `localhost:8080` / `file://`）ごとに、ブラウザの保存領域は別になります。口座鍵とコントラクトアドレスは引き継がれないので、同じコントラクトを使うには「既存コントラクトに接続」でアドレスを入力してください。
+
+### 3.3 Pactora UI 版（単一 HTML）
+
+画面と挙動を Pactora の画面モック（`pactora-phase2-usecase-mock.html` の業務 01 トークン化預金）に合わせた版です。コントラクトと Lace への接続は 3.1・3.2 と同じものを使います。
+
+| 項目 | 内容 |
+|---|---|
+| ファイル | `dist-pactora/pactora-tdeposit-demo.html`（約 55MB） |
+| ビルド | `build-pactora.cmd`（= `npm run build:pactora`） |
+| 公開 URL | https://101nimura.github.io/midnight_td_demo/ （GitHub Pages。`dist-pactora/pactora-tdeposit-demo.html` を main に push すると自動で更新。`.github/workflows/pages.yml`） |
+| 開き方（ローカル） | `start-pactora.cmd` → http://localhost:8081/pactora-tdeposit-demo.html（`file://` で直接開くと Lace が組み込まれないことがあるため、この方法を推奨） |
+| 開発サーバー | `start-dev.cmd` → http://localhost:5173/pactora.html |
+| ソース | `pactora.html`、`src/pactora/`（`app.ts` 画面と操作、`pactora.css` モックから流用した CSS） |
+
+画面の流れはモックと同じで、業務選択（S-1）→ 環境の準備（S-2：Lace の接続・DUST・口座鍵・コントラクト）→ ログイン（L-1）→ 左の**ガイド**に沿って 15 ステップを進めます。
+
+| フェーズ | 操作するユーザー | 画面 | Midnight 上の操作 |
+|---|---|---|---|
+| 提供開始 | △△銀行 | 資金トークン 一覧（M-1） | デプロイ |
+| 口座開設（KYC） | △△銀行 | 口座管理（M-4） | `registerAccount` × 2 |
+| 入金（mint） | 投資家A → △△銀行 | 資金（I-3）→ 発行・償還（M-3） | 申込はオフチェーン → `issue` |
+| 誤送金と強制移転 | 投資家A → Pactora運用 → △△銀行 | I-3 → 保有・取引履歴（I-4）→ Recovery（M-8）→ 強制移転の承認（M-8） | `transfer` → 返却依頼・申請はオフチェーン → `forceTransfer` |
+| 凍結 | △△銀行 → 投資家B → △△銀行 | M-4 → I-3 → M-4 | `freezeAccount` → `transfer`（コントラクトが拒否）→ `unfreezeAccount` |
+| 出金（burn） | 投資家A → △△銀行 | I-3 → M-3 | `redeem` → 普通預金への入金はオフチェーン |
+| 照合・監査 | Pactora運用・監察機関 | 預金台帳・照合（M-5）・監査ログ（AD-4） | 状態の参照のみ |
+
+- モックの「署名リクエスト」を押すと、実際に ZK 証明 → **Lace の承認** → 送信 → ブロック取り込みが進みます（進捗はダイアログと「Midnight 実行ログ」（AD-6）に表示されます）。
+- 普通預金（勘定系）、入出金の申込、返却依頼、強制移転の申請、照合結果、操作ログ（Tx ハッシュ）は、このブラウザの localStorage に保存する模擬データです。
+- 口座鍵は「ウォレット・口座鍵」または S-2 からエクスポート／インポートできます（別のブラウザ・別の URL で同じ銀行の鍵を使う場合）。
+- 左下の「初期化」では「業務データだけ初期化」と「新しいコントラクトで最初から」を選べます（チェーン上の記録は消えません）。
+- モックの資産サイド（社債 ST・DvP）は、コントラクトにないため対象外です（課題 M8）。
 
 ---
 
@@ -250,7 +283,7 @@ start-single.cmd
 
 | 症状（実行ログ / 画面） | 原因 | 対処 |
 |---|---|---|
-| 「Lace ウォレットが見つかりません」 | Lace が無効 / `file://` で開いていてファイル URL へのアクセスが OFF | 拡張機能を有効にする / 3.2 の開き方 B の 1 を行う / 開き方 A を使う |
+| 「Lace ウォレットが見つかりません」 | Lace が無効 / `file://` で開いている（許可設定を ON にしても組み込まれないことがある。ISSUES.md #33）/ Lace の「サイトへのアクセス」が制限されている | 拡張機能を有効にする / **開き方 A（http://localhost）を使う** / Lace の「サイトへのアクセス」を「すべてのサイト」にする。エラーメッセージの末尾に、開いている URL と見つかったウォレットが表示されます |
 | 「ネットワーク (…) が preview ではありません」 | Lace のネットワークが違う | Lace の設定で Preview を選ぶ |
 | 右上の DUST が 0 | DUST を生成していない / 生成直後でまだたまっていない | SETUP.md の「7.」。生成後、数分〜十数分待って「再取得」を押す |
 | デプロイ・操作が長時間止まる、証明のエラー | Proof Server が動いていない | http://localhost:6300/version を確認。止まっていれば `docker compose -f proof-server.yml up -d` |

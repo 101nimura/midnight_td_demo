@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pactora × Midnight | トークン化預金デモ</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 414 414%22%3E%3Ccircle fill=%22%23002496%22 cx=%22207%22 cy=%22207%22 r=%22207%22/%3E%3Cpath fill=%22%2300e3d7%22 d=%22M317.993,216.198h-48.794v.058c-30.147,1.201-54.222,26.008-54.222,56.45,0,31.208,25.299,56.508,56.508,56.508,30.442,0,55.249-24.075,56.45-54.222h.058v-48.793c0-5.523-4.477-10-10-10Z%22/%3E%3C/svg%3E" />
+    <!--
+      Pactora UI 版 トークン化預金デモ（Midnight Preview × Lace）
+      画面・挙動のベース：pactora-phase2-usecase-mock.html（業務 01 トークン化預金）
+      オンチェーンの操作は Midnight Preview 上の実トランザクション（ZK 証明 → Lace 承認 → 送信）
+    -->
+  </head>
+  <body>
+    <div class="win">
+      <div class="chrome"><i></i><i></i><i></i><div class="url" id="url"></div></div>
+      <div id="root"></div>
+    </div>
+    <div class="ov" id="ov"><div class="dlg" id="dlg"></div></div>
+    <div id="toast"></div>
+    <script type="module" src="/src/pactora/main.ts"></script>
+  </body>
+</html>

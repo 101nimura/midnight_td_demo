@@ -9,3 +9,5 @@ tools/dust/node_modules/
 tools/dust/.demo-wallet-seed
 dist-single/*
 !dist-single/tdeposit-demo.html
+dist-pactora/*
+!dist-pactora/pactora-tdeposit-demo.html

@@ -40,12 +40,16 @@ type Deployed = FoundContract<TDepositContract>;
 export class TDepositAPI {
   readonly address: string;
   readonly state$: Observable<TDepositState>;
+  /** デプロイ Tx の情報（画面表示用） */
+  readonly deployTx: { txHash: string; blockHeight?: number | bigint };
 
   private constructor(
     private readonly deployed: Deployed,
     private readonly providers: TDepositProviders,
   ) {
     this.address = deployed.deployTxData.public.contractAddress;
+    const pub = deployed.deployTxData.public as { txHash?: unknown; blockHeight?: number | bigint };
+    this.deployTx = { txHash: pub.txHash === undefined ? '' : String(pub.txHash), blockHeight: pub.blockHeight };
     this.state$ = providers.publicDataProvider
       .contractStateObservable(this.address, { type: 'latest' })
       .pipe(map((cs) => toView(ledger(cs.data))));

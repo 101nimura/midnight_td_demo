@@ -16,7 +16,8 @@
     "dev": "npm run copy-keys && vite --host",
     "build": "npm run copy-keys && tsc --noEmit && vite build",
     "start": "vite preview --host",
-    "build:single": "tsc --noEmit && vite build --config vite.single.config.ts --mode single && mv dist-single/index.html dist-single/tdeposit-demo.html"
+    "build:single": "tsc --noEmit && vite build --config vite.single.config.ts --mode single && mv dist-single/index.html dist-single/tdeposit-demo.html",
+    "build:pactora": "tsc --noEmit && vite build --config vite.pactora.config.ts --mode single && mv dist-pactora/pactora.html dist-pactora/pactora-tdeposit-demo.html"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

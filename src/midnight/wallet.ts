@@ -54,21 +54,64 @@ export const findWallets = (): InitialAPI[] => {
   if (!m) return [];
   return Object.values(m).filter(
     (w): w is InitialAPI =>
-      !!w && typeof w === 'object' && 'apiVersion' in w && semver.satisfies(String(w.apiVersion), COMPATIBLE_API),
+      !!w &&
+      typeof w === 'object' &&
+      'apiVersion' in w &&
+      semver.satisfies(String(w.apiVersion), COMPATIBLE_API, { includePrerelease: true }),
   );
 };
 
-const waitForWallet = async (timeoutMs = 3000): Promise<InitialAPI> => {
+/**
+ * エラーを人が読める文字列にする。
+ * DApp Connector のエラー（APIError）は Error を継承しておらず message が空のことがあるため、
+ * code / reason / cause の連鎖まで展開する。
+ */
+export const describeError = (e: unknown, depth = 0): string => {
+  if (e === undefined || e === null) return String(e);
+  if (typeof e !== 'object') return String(e);
+  const o = e as { type?: unknown; code?: unknown; reason?: unknown; message?: unknown; name?: unknown; cause?: unknown };
+  const parts: string[] = [];
+  if (o.type === 'DAppConnectorAPIError' || o.code !== undefined) parts.push(`[${String(o.code ?? '?')}] ${String(o.reason ?? '')}`.trim());
+  if (typeof o.message === 'string' && o.message && !parts.some((p) => p.includes(o.message as string))) parts.push(o.message);
+  if (parts.length === 0) {
+    try {
+      const j = JSON.stringify(e, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+      parts.push(j && j !== '{}' ? j : `${String(o.name ?? 'Error')}（詳細なし: ${Object.prototype.toString.call(e)}）`);
+    } catch {
+      parts.push(String(e));
+    }
+  }
+  if (o.cause !== undefined && depth < 4) parts.push(`← 原因: ${describeError(o.cause, depth + 1)}`);
+  return parts.join(' ');
+};
+
+/** 見つからなかったときの原因を切り分けるための診断メッセージ */
+const walletDiagnosis = (): string => {
+  const m = window.midnight as Record<string, unknown> | undefined;
+  const where = `開いている URL: ${window.location.protocol}//${window.location.host || '(ファイル)'}`;
+  if (!m || Object.keys(m).length === 0) {
+    const hint =
+      window.location.protocol === 'file:'
+        ? 'file:// で開いています。Lace のバージョンによっては、「ファイルの URL へのアクセスを許可する」を ON にしても file:// のページには組み込まれません。start-pactora.cmd（http://localhost:8081）/ start-single.cmd（http://localhost:8080）で開いてください。'
+        : 'Lace がこのページに組み込まれていません（window.midnight がありません）。拡張機能の管理 → Lace の「詳細」→「サイトへのアクセス」が「すべてのサイト」になっているか（特定のサイトだけを許可している場合は、この URL を追加）確認し、ページを再読み込みしてください。Lace を入れた・有効にした直後も再読み込みが必要です。';
+    return `Midnight 対応の Lace ウォレットが見つかりません。${hint}（${where}）`;
+  }
+  const found = Object.entries(m)
+    .map(([k, w]) => {
+      const x = (w ?? {}) as { name?: unknown; apiVersion?: unknown };
+      return `${k}（name=${String(x.name ?? '?')}, apiVersion=${String(x.apiVersion ?? '?')}）`;
+    })
+    .join(' / ');
+  return `Midnight のウォレットは見つかりましたが、このデモが対応する DApp Connector API ${COMPATIBLE_API} ではありません。見つかったウォレット: ${found}。Lace のバージョンを確認してください（${where}）`;
+};
+
+const waitForWallet = async (timeoutMs = 10000): Promise<InitialAPI> => {
   const started = Date.now();
   for (;;) {
     const wallets = findWallets();
     const lace = wallets.find((w) => /lace/i.test(w.name) || /lace/i.test(w.rdns)) ?? wallets[0];
     if (lace) return lace;
-    if (Date.now() - started > timeoutMs) {
-      throw new Error(
-        'Midnight 対応の Lace ウォレットが見つかりません。Lace 拡張機能がインストール・有効化されているか確認してください。',
-      );
-    }
+    if (Date.now() - started > timeoutMs) throw new Error(walletDiagnosis());
     await new Promise((r) => setTimeout(r, 100));
   }
 };
@@ -122,14 +165,31 @@ export const connectWallet = async (log: (msg: string) => void): Promise<Session
       getEncryptionPublicKey: () => shielded.shieldedEncryptionPublicKey,
       balanceTx: async (tx: UnboundTransaction): Promise<FinalizedTransaction> => {
         log('Lace でトランザクションを承認してください（手数料 DUST の支払い）…');
-        const res = await api.balanceUnsealedTransaction(toHex(tx.serialize()));
-        return Transaction.deserialize<SignatureEnabled, Proof, Binding>('signature', 'proof', 'binding', fromHex(res.tx));
+        let res: { tx: string };
+        try {
+          res = await api.balanceUnsealedTransaction(toHex(tx.serialize()));
+        } catch (e) {
+          console.error('balanceUnsealedTransaction failed', e);
+          throw new Error(`Lace での手数料の支払い（balanceUnsealedTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
+        }
+        log('Lace の承認が完了しました');
+        try {
+          return Transaction.deserialize<SignatureEnabled, Proof, Binding>('signature', 'proof', 'binding', fromHex(res.tx));
+        } catch (e) {
+          console.error('Transaction.deserialize failed', e);
+          throw new Error(`Lace が返したトランザクションを読み込めませんでした（ledger の形式の不一致の可能性）: ${describeError(e)}`, { cause: e });
+        }
       },
     },
     midnightProvider: {
       submitTx: async (tx: FinalizedTransaction): Promise<TransactionId> => {
         log('トランザクションを送信中…');
-        await api.submitTransaction(toHex(tx.serialize()));
+        try {
+          await api.submitTransaction(toHex(tx.serialize()));
+        } catch (e) {
+          console.error('submitTransaction failed', e);
+          throw new Error(`トランザクションの送信（submitTransaction）に失敗しました: ${describeError(e)}`, { cause: e });
+        }
         return tx.identifiers()[0];
       },
     },
