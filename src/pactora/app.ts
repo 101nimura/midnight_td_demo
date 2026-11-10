@@ -394,7 +394,7 @@ function errorDlg(op: string, e: unknown, doneN: number) {
   else if (/Internal Server Error|ServerError|Failed to fetch|ECONNREFUSED/i.test(m))
     hints.push(PS_OK === true
       ? `ウォレットの内部で、サーバーからエラー（Internal Server Error）が返っています。ローカルの Proof Server（${PROOF_URL}）には接続できるので、<b>ウォレットがローカルの Proof Server を使っていない</b>可能性があります。ウォレットの 設定 → Midnight で、証明サーバーが「カスタムプルーフサーバー」<code>${PROOF_URL}</code> になっているか確認してください（ウォレットの更新で既定に戻ることがあります）。それでも失敗する場合は、ウォレット単体の送金（自分宛の tNIGHT 送金など）も失敗するかを確認してください。失敗するなら、ウォレットとネットワーク側の問題です。`
-      : `ウォレットが証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 8.0.3 と表示されることを確かめます。`);
+      : `ウォレットが証明サーバーに証明を依頼して失敗しています。<b>Proof Server（${PROOF_URL}）が起動しているか</b>確認してください${PS_OK === false ? '（いま確認したところ、<b>接続できません</b>）' : ''}。Rancher Desktop を起動して「Running」になってから <code>docker compose -f proof-server.yml up -d</code> を実行し、http://localhost:6300/version で 9.0.0 と表示されることを確かめます。`);
   else if (/insufficient|not enough|dust balance|NotEnough/i.test(m)) hints.push('ウォレットの DUST 残高を確認してください（0 だと手数料を支払えません）。');
   if (/proof|prove|6300|fetch/i.test(m)) hints.push('Proof Server（http://localhost:6300）が起動しているか、ウォレットの証明サーバー設定を確認してください。');
   if (/reject|denied|cancel/i.test(m)) hints.push('ウォレットで承認が拒否されました。');
@@ -460,7 +460,7 @@ function vUsecase() {
   const note = `<p class="xs" style="margin-top:16px">※ 仮称：△△銀行（預金トークン発行）／◎◎物流・☆☆商事（法人投資家）。普通預金（勘定系）は模擬、預金トークンの残高・操作は Midnight ${esc(NETWORK_ID)} 上の実データです。</p>`;
   return preHead() + `<div class="pt-band pf"><div><div class="lp-eb">TOKENIZED DEPOSIT ON MIDNIGHT</div><h1>Pactora × Midnight へようこそ</h1><p>預金トークンの発行・償還、口座登録・送金・強制移転・凍結までを、Midnight のゼロ知識証明付きトランザクションで実行します。</p></div><div class="pt-pf">${platformSvg()}</div></div>
     <div class="pt-body"><div class="card pt-login"><h3>はじめる前に</h3><p class="xs">デモを始める前に、毎回次の項目を確認してください。</p>
-        <ul class="pt-ul"><li>Docker（Rancher Desktop）が Running になり、Proof Server が起動している（http://localhost:6300/version → 8.0.3）</li><li>Midnight 対応ウォレット（1AM 推奨）のネットワークが <b>Preview</b>、証明サーバーが <b>http://localhost:6300</b></li><li>ウォレットの <b>DUST が 0 より大きい</b>（0 だと手数料不足ですべての操作が失敗します）</li></ul>
+        <ul class="pt-ul"><li>Docker（Rancher Desktop）が Running になり、Proof Server が起動している（http://localhost:6300/version → 9.0.0。1AM はウォレット側で証明できるため不要な場合あり）</li><li>Midnight 対応ウォレット（1AM 推奨）のネットワークが <b>Preview</b>、証明サーバーが <b>http://localhost:6300</b></li><li>ウォレットの <b>DUST が 0 より大きい</b>（0 だと手数料不足ですべての操作が失敗します）</li></ul>
         <button class="btn lg" style="width:100%;margin-top:14px" data-act="pickUc">業務 01 を始める →</button></div>
       <div><div class="pt-h"><h3>業務から始める</h3><span class="xs">業務の流れに沿ってガイド付きで操作できます</span></div>
         <div class="pt-list"><div class="ucg-h money">資金サイド<small>MONEY</small></div>${row}</div>${note}</div></div>`;
@@ -474,7 +474,7 @@ function vProvision() {
       s ? '' : `<button class="btn sm" data-act="connect">ウォレットに接続</button>`],
     ['手数料（DUST）の確認', s ? `DUST 残高 ${dust === undefined ? '不明' : num(dust)}${s.dustCap !== undefined ? ` ／ 上限 ${num(s.dustCap)}` : ''}${dust === 0n ? '<br><b style="color:var(--ng)">DUST が 0 のため、すべての操作が手数料不足で失敗します（SETUP.md 7 章）</b>' : ''}` : 'ウォレットに接続すると表示されます', s ? dust !== 0n : null, s ? (dust === 0n ? 'DUST 不足' : 'OK') : '—',
       s ? '<button class="btn sm gh" data-act="dustRefresh">再取得</button>' : ''],
-    ['Proof Server の起動確認', PS_OK === null ? `${PROOF_URL} に接続できるか確認します（ウォレットの証明サーバーを「カスタム ${PROOF_URL}」にしている場合に必要）` : PS_OK ? `${PROOF_URL} に接続できました` : `<b style="color:var(--ng)">${PROOF_URL} に接続できません。</b>Rancher Desktop を起動し「Running」になってから、<code>docker compose -f proof-server.yml up -d</code> を実行してください（http://localhost:6300/version → 8.0.3）`, PS_OK, PS_OK === null ? '未確認' : PS_OK ? 'OK' : '停止中',
+    ['Proof Server の起動確認', PS_OK === null ? `${PROOF_URL} に接続できるか確認します（ウォレットの証明サーバーを「カスタム ${PROOF_URL}」にしている場合に必要）` : PS_OK ? `${PROOF_URL} に接続できました` : `<b style="color:var(--ng)">${PROOF_URL} に接続できません。</b>Rancher Desktop を起動し「Running」になってから、<code>docker compose -f proof-server.yml up -d</code> を実行してください（http://localhost:6300/version → 9.0.0）`, PS_OK, PS_OK === null ? '未確認' : PS_OK ? 'OK' : '停止中',
       '<button class="btn sm gh" data-act="psCheck">確認</button>'],
     ['デモユーザーの口座鍵', `${HOLDERS.map((h) => `${orgOf(h)}：<span class="mono">${short(KEYS[h].id, 6)}</span>`).join('<br>')}<br><span class="xs">口座鍵（秘密鍵）はこのブラウザにのみ保存。チェーンには口座ID（ハッシュ）だけが記録されます</span>`, true, '作成済み',
       '<button class="btn sm gh" data-act="keysExport">エクスポート</button> <button class="btn sm gh" data-act="keysImport">インポート</button>'],
