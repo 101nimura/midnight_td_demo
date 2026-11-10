@@ -264,3 +264,15 @@
   - その状態でデプロイすると、Lace の承認後に `balanceUnsealedTransaction` が `Internal Server Error` で失敗した。Proof Server には証明の依頼が届いておらず、手数料（DUST）の支払いを組み立てる段階で失敗したと考えられる（#34 の事象の原因と見ている）。
 - 対応: Lace の再同期（またはウォレットの削除と復元）→ Faucet で tNIGHT を再取得 → DUST 生成の再登録（Lace または `dust-designate.cmd`）→ デプロイし直し。
 - 示唆: テストネットは予告の有無にかかわらずリセットされ、台帳の継続性がない（C4）。ウォレットの表示残高が実際のチェーンと食い違うことがあるので、障害時は Indexer やノードで直接確認する手順を持っておく必要がある。デモの前に、ネットワークの状態（ブロック高・リセットの有無）を確認すること。
+
+## 36. [技術] Lace の接続先（Blockfrost）が Preview のリセットに追従せず、Lace で何もできない
+
+- #35 の Preview リセットの後（2026-11-10 12:30 頃）に、Lace の接続先（Lace の「Midnight設定」に表示され、利用者は変更できない）を直接確認した。
+  - ノード RPC `rpc.midnight-preview.blockfrost.io`: ブロック高 約 163 万（`0x18e171`）。**リセット前の古いチェーンのまま**。
+  - インデクサ `midnight-preview.blockfrost.io/api/v0`: GraphQL の問い合わせに `{"error":"Internal Server Error","status_code":500}` を返す。
+  - 公式（`indexer.preview.midnight.network` / `rpc.preview.midnight.network`）: ブロック高 約 4.5 万（リセット後の新しいチェーン）。Faucet もこちら。
+- これで次の症状が説明できる。
+  - デプロイ時の `balanceUnsealedTransaction` → `Internal Server Error`（#34）は、Lace が Blockfrost のインデクサに問い合わせて 500 が返っていた。Proof Server に証明の依頼が届かないのもこのため。
+  - 再同期の前は、古いチェーンの残高が表示されていた。再同期の後は、インデクサが失敗するため何も表示されない。Faucet で受け取った tNIGHT（新しいチェーン）も見えない。
+- デモは、チェーンの状態を読む接続先も Lace の設定（`getConfiguration().indexerUri`）から受け取っているため、同じ影響を受ける。
+- 示唆: ウォレットの接続先をサードパーティが握っており、利用者も DApp も変更できない。ネットワークのリセットや障害のときに、復旧を待つ以外の手段がない（M2, M3）。銀行の業務では、接続先を自社で管理できるウォレット（または自社運用のノード・インデクサ + サーバー側での手数料支払い）が必要。
