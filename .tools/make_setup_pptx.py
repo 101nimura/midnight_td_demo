@@ -220,21 +220,26 @@ textbox(s, Inches(0.8), Inches(3.9), Inches(11.5), Inches(2.2), [
     "所要時間: 約 2〜3 時間（ダウンロード・DUST がたまるのを待つ時間を含む）",
     "2026-11-10 改訂（Preview の再起動・ledger 9 対応）",
 ], size=16, color=WHITE)
-textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: docs/SETUP.md　／　デモの動かし方: README.md　／　課題: docs/ISSUES.md・docs/TOKENIZED_DEPOSIT_ISSUES.md"], size=12, color=RGBColor(0x8F, 0x9B, 0xB8))
+textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: docs/SETUP.md　／　デモの動かし方: README.md"], size=12, color=RGBColor(0x8F, 0x9B, 0xB8))
 
-# 2. 改訂のポイント
-s = new_slide("2026-11-10 改訂のポイント", "はじめに")
-table(s, Inches(0.6), Inches(1.3), Inches(12.1), [
-    ["項目", "初版（11/2）", "改訂（11/10）", "理由"],
-    ["Preview", "ledger 8 のチェーン", "11/7 に ledger 9 で再起動", "公式の更新。tNIGHT・DUST・コントラクトは消えた（#35）"],
-    ["Compact", "0.31.1", "0.36.0", "ledger 9 への対応（#37, #38）"],
-    ["SDK", "midnight-js 4.1.1", "midnight-js 5.0.0", "同上"],
-    ["Proof Server", "8.0.3", "9.0.0", "同上"],
-    ["ウォレット", "Lace", "1AM", "Lace の接続先（Blockfrost）が古いチェーンのまま（#36）"],
-    ["DUST の用意", "代替ツール（dust-designate）", "1AM の画面で生成", "ツールは ledger 8 用で使えない（#38）"],
-], col_w=[1.8, 2.9, 2.9, 4.5], size=13, row_h=Inches(0.62))
-callout(s, Inches(0.6), Inches(5.9), Inches(12.1), Inches(0.95), "11/2 に作った環境が、何も変えずに 1 週間で使えなくなった", [
-    "テストネットはリセット・更新される前提で、毎回 1.5 の「Preview の状態確認」から始めてください。"])
+# 2. この手順書について
+s = new_slide("この手順書について", "はじめに")
+textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["Windows 11 で、Midnight（Preview）の DApp を開発する環境を一から作る手順です。順番どおりに進めてください。"], size=17)
+pts = [
+    ("2026-11-10 に動作確認", "手順・バージョンはこの日に確認した組み合わせ（付録 A）"),
+    ("毎回、Preview を確認", "テストネットはリセット・更新される。作業前に 1.5 で状態を確認"),
+    ("バージョンを固定", "Compact 0.36.0 / midnight-js 5.0.0 / Proof Server 9.0.0"),
+    ("Docker は「Running」を待つ", "起動しきる前の操作は docker_engine エラーになる"),
+    ("DUST は自動では増えない", "登録が必要で、時間とともにたまる。0 だと全操作が失敗"),
+    ("画面は版で変わる", "ウォレット等のボタン名が違う場合は、近いものを探す"),
+]
+for i, (h, d) in enumerate(pts):
+    col, row = i % 3, i // 3
+    x = Inches(0.6) + col * Inches(4.1)
+    y = Inches(2.15) + row * Inches(2.35)
+    rect(s, x, y, Inches(3.85), Inches(2.1), LIGHT, BORDER, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
+    rect(s, x, y, Inches(3.85), Inches(0.09), BLUE)
+    textbox(s, x + Inches(0.2), y + Inches(0.25), Inches(3.5), Inches(1.8), [(h, {"bold": True, "size": 18}), (d, {"size": 14, "color": MUTED})])
 
 # 3. 全体構成
 s = new_slide("0.1 全体構成", "全体像")
@@ -273,7 +278,7 @@ arrow(s, Inches(9.15), Inches(3.9), Inches(0.42), Inches(0.4))
 # 4. なぜこの構成なのか
 s = new_slide("0.2 なぜこの構成なのか", "全体像")
 table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
-    ["判断", "理由（構築時に実際に問題になった点）"],
+    ["判断", "理由"],
     ["ビルドを WSL2 で行う", "Compact コンパイラは Linux / macOS 版のみ。SDK は Node.js 22.12 以上が必要"],
     ["Docker は Rancher Desktop", "Proof Server は Docker イメージで提供（Docker Desktop でも可）"],
     ["バージョンを固定", "コンパイラ・ランタイム・SDK・Proof Server・ウォレットの組み合わせが厳密。公式の対応表（Support matrix）に合わせる"],
@@ -296,7 +301,7 @@ table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
 
 # 6. 作業の流れ
 s = new_slide("0.4 作業の流れ", "全体像")
-steps = [("1", "事前確認|Git・Preview", "15分"), ("2", "WSL2", "20分"), ("3", "Node.js", "10分"), ("4", "Compact", "10分"),
+steps = [("1", "事前確認|Git・クローン", "20分"), ("2", "WSL2", "20分"), ("3", "Node.js", "10分"), ("4", "Compact", "10分"),
          ("5", "Docker|Proof|Server", "30分"), ("6", "1AM", "15分"), ("7", "tNIGHT|DUST", "10〜30分"), ("8", "環境の|確認", "20分")]
 for i, (n, name, t) in enumerate(steps):
     x = Inches(0.5) + i * Inches(1.58)
@@ -337,28 +342,36 @@ callout(s, Inches(0.6), Inches(5.3), Inches(12.1), Inches(1.2), "Windows の cur
     "CRYPT_E_NO_REVOCATION_CHECK が出たら --ssl-no-revoke を付ける。"])
 
 # 8. コマンドの実行場所と Git
-s = new_slide("1.3〜1.4 コマンドを実行する場所 / Git", "1. 事前確認")
+s = new_slide("1.3〜1.4 コマンドを実行する場所 / Git とクローン", "1. 事前確認")
 table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
     ["実行する場所", "注意点"],
     ["PowerShell", "基本はここ。*.cmd（Windows のバッチファイル）は .\\xxx.cmd で実行する"],
-    ["WSL の bash（user@PC:/mnt/c/...$）", "$ で始まる行はここ。*.cmd はここでは動かない（.\\xxx.cmd: command not found。11/10 に発生）"],
+    ["WSL の bash（user@PC:/mnt/c/...$）", "$ で始まる行はここ。*.cmd はここでは動かない（.\\xxx.cmd: command not found になる）"],
     ["Git Bash", "wsl を呼ぶとパスが書き換えられて失敗する → 先頭に MSYS_NO_PATHCONV=1"],
 ], col_w=[3.8, 8.3], size=14, row_h=Inches(0.75))
-textbox(s, Inches(0.6), Inches(4.65), Inches(12.1), Inches(1.2), [
-    ("Git のインストール", {"bold": True, "size": 18}),
-    "・git --version でバージョンが表示されれば不要。表示されなければ https://git-scm.com/download/win（設定は既定のまま）",
-], size=15)
+textbox(s, Inches(0.6), Inches(4.5), Inches(6.0), Inches(2.3), [
+    ("Git とリポジトリのクローン", {"bold": True, "size": 18}),
+    "・git --version で表示されなければ https://git-scm.com/download/win",
+    "・Proof Server の設定・確認用スクリプトがあるので先にクローン",
+    "・置き場所は空白・日本語なし、OneDrive 同期外（例: C:\\work）",
+], size=14)
+code(s, Inches(6.9), Inches(4.55), Inches(5.9), Inches(1.6), [
+    "mkdir C:\\work -Force",
+    "cd C:\\work",
+    "git clone https://github.com/101nimura/midnight_td_demo.git",
+    "cd midnight_td_demo     # 以降「リポジトリのフォルダ」",
+], size=12)
 
 # 9. Preview の状態確認
 s = new_slide("1.5 Preview の状態を確認する（毎回・作業の前に）", "1. 事前確認")
-textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["Preview はリセットされることがあります（2026-11-07 に実際にリセット）。以前の tNIGHT・DUST・コントラクトが使えるかを先に確認します。"], size=16)
+textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["Preview はリセットされることがあります（例: 2026-11-07 に ledger 9 で再起動）。以前の tNIGHT・DUST・コントラクトが使えるかを先に確認します。"], size=16)
 code(s, Inches(0.6), Inches(2.05), Inches(12.1), Inches(1.15), [
-    "curl.exe -sS --ssl-no-revoke -H \"Content-Type: application/json\" `",
-    "  -d '{\\\"query\\\":\\\"{ block { height timestamp } }\\\"}' https://indexer.preview.midnight.network/api/v4/graphql",
+    "(Invoke-RestMethod -Method Post -Uri 'https://indexer.preview.midnight.network/api/v4/graphql' `",
+    "  -ContentType 'application/json' -Body '{\"query\":\"{ block { height timestamp } }\"}').data.block",
 ], size=13)
 table(s, Inches(0.6), Inches(3.45), Inches(12.1), [
     ["結果", "意味・対応"],
-    ["{\"data\":{\"block\":{\"height\":…}}} が返る", "Preview は動いている"],
+    ["height と timestamp が表示される", "Preview は動いている（height を控えておく）"],
     ["前回より height（ブロック高）が小さい", "リセットされた → tNIGHT・DUST を取り直し（7 章）、コントラクトはデプロイし直す"],
     ["ledger の版が上がっている", "付録 A のバージョン一式を、公式の対応表に合わせて更新する"],
 ], col_w=[4.3, 7.8], size=14, row_h=Inches(0.62))
@@ -420,7 +433,7 @@ code(s, Inches(6.9), Inches(2.75), Inches(5.9), Inches(0.75), [".\\make-ca-bundl
 textbox(s, Inches(6.9), Inches(3.7), Inches(5.9), Inches(2.8), [
     "・proof-server.yml が必ず読み込むので、TLS 検査がなくても作る",
     "・Netskope 以外は .tools\\make-ca-bundle.ps1 -Pattern '*zscaler*'",
-    "・スクリプトは本リポジトリのもの（8.1 でクローン）。先に Proof Server を起動したい場合は 8.1 を先に行う",
+    "・リポジトリのフォルダ（1.4）で実行する",
 ], size=14)
 
 # 13. Proof Server の起動
@@ -438,7 +451,7 @@ textbox(s, Inches(0.6), Inches(2.7), Inches(7.0), Inches(3.0), [
     "・PC 再起動後は Running を待ってから up -d",
 ], size=15)
 callout(s, Inches(7.9), Inches(1.35), Inches(4.9), Inches(2.6), "Proof Server の使いどころ", [
-    "ブラウザの DApp からの証明は、ウォレット（1AM）が自分で作ることもできる（11/10 のデプロイでは依頼が届かなかった）",
+    "ブラウザの DApp から 1AM を使う場合、証明はウォレット側で作られる（Proof Server なしで動作。2026-11-10 に確認）",
     "CLI・テストの自動化・ローカルで証明したい場合（httpClientProofProvider）に使う",
 ], kind="ok")
 
@@ -488,10 +501,10 @@ for i, (h, d) in enumerate(flow):
     if i < 3:
         arrow(s, x + Inches(2.75), Inches(2.25), Inches(0.3), Inches(0.3))
 callout(s, Inches(0.6), Inches(3.6), Inches(12.1), Inches(1.5), "DUST が 0 だと、デプロイを含むすべての操作が手数料不足で失敗する", [
-    "tNIGHT を受け取っただけでは DUST は増えない。②の登録が別に必要で、登録後も少しずつたまる（構築時は約 0.04 DUST/秒）。",
+    "tNIGHT を受け取っただけでは DUST は増えない。②の登録が別に必要で、登録後も少しずつたまる（目安: 約 0.04 DUST/秒）。",
 ])
-callout(s, Inches(0.6), Inches(5.35), Inches(12.1), Inches(1.3), "初版の代替ツール（dust-install.cmd / dust-designate.cmd）は使えない", [
-    "ledger 8 用（testkit-js 4.x）のまま。今は 1AM の画面から DUST を生成する（7.2）。",
+callout(s, Inches(0.6), Inches(5.35), Inches(12.1), Inches(1.3), "リポジトリの dust-install.cmd / dust-designate.cmd は使えない", [
+    "旧版（ledger 8）用の代替ツール。1AM の画面から DUST を生成する（7.2）。",
 ])
 
 # 17. tNIGHT を受け取る
@@ -518,33 +531,22 @@ two_col_pic(s, [
     ("NIGHT UTXOS AVAILABLE: 0 → 登録済み。たまるのを待つ", {"size": 13, "color": MUTED}),
 ], "1am-your-dust.png", size=15, left_w=5.2)
 
-# 19. クローン・コンパイル・テスト・ビルド
-s = new_slide("8.1〜8.2 環境の確認（本リポジトリをサンプルに）", "8. 確認")
-code(s, Inches(0.6), Inches(1.35), Inches(6.0), Inches(1.6), [
-    "mkdir C:\\work -Force",
-    "cd C:\\work",
-    "git clone https://github.com/101nimura/midnight_td_demo.git",
-    "cd midnight_td_demo",
-], size=13)
-code(s, Inches(6.9), Inches(1.35), Inches(5.9), Inches(1.6), [
-    ".\\npm-install.cmd        # 依存パッケージ",
-    ".\\compile-contract.cmd   # コンパイラの確認",
+# 19. コンパイル・テスト・ビルド
+s = new_slide("8.1 環境の確認（コンパイル・テスト・ビルド）", "8. 確認")
+textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["ここまでの環境で、リポジトリ（1.4 でクローン）のコンパイル・テスト・ビルドが通るかを確認します。PowerShell で、リポジトリのフォルダで実行します。"], size=15)
+code(s, Inches(0.6), Inches(2.1), Inches(6.4), Inches(1.9), [
+    ".\\npm-install.cmd        # 依存パッケージ（数分）",
+    ".\\compile-contract.cmd   # コンパイラの確認（数分）",
     ".\\run-tests.cmd          # 9 passed",
     ".\\build-pactora.cmd      # SDK・Vite の確認",
-], size=13)
-textbox(s, Inches(0.6), Inches(3.2), Inches(6.0), Inches(3.3), [
-    "・置き場所は空白・日本語なし、OneDrive 同期外（例: C:\\work）",
-    "・コンパイル済みのコントラクト（ZK 鍵 約 108MB）を含む",
-    "・スクリプト（*.cmd）はどこにクローンしても書き換え不要",
-    "・$'\\r': command not found → git rm --cached -r . → git reset --hard",
 ], size=14)
-callout(s, Inches(6.9), Inches(3.2), Inches(5.9), Inches(1.9), "compile-contract.cmd は成果物を作り直す", [
+callout(s, Inches(7.3), Inches(2.1), Inches(5.5), Inches(1.9), "compile-contract.cmd は成果物を作り直す", [
     "確認だけなら git checkout -- contract/managed で戻す",
     "compiler/contract-manifest.json の compiler-version が 0.36.0 なら OK",
 ])
 
 # 20. 接続の確認とチェックリスト
-s = new_slide("8.3〜8.4 ウォレット接続の確認とチェックリスト", "8. 確認")
+s = new_slide("8.2〜8.3 ウォレット接続の確認とチェックリスト", "8. 確認")
 code(s, Inches(0.6), Inches(1.35), Inches(4.4), Inches(0.75), [".\\start-dev.cmd   # 開発サーバー"], size=13)
 textbox(s, Inches(0.6), Inches(2.25), Inches(4.4), Inches(3.5), [
     "・http://localhost:5173/pactora.html を開く",
@@ -581,17 +583,17 @@ t2 = [
     ["Proof Server がすぐ止まる", "社内 TLS 検査", "make-ca-bundle.cmd → 再起動"],
     ["localhost:6300/version が 8.0.3", "古いコンテナ", "docker compose … up -d で 9.0.0 に"],
     ["DUST がずっと 0", "未登録 / 登録直後", "7.2 の GENERATE DUST → 数分待つ"],
-    ["dust-designate.cmd が使えない", "ledger 8 用のツール（#38）", "1AM の画面で DUST を生成"],
+    ["dust-designate.cmd が使えない", "旧版（ledger 8）用のツール", "1AM の画面で DUST を生成"],
     ["Faucet が成功なのに着金しない", "アドレス違い / 同期前", "unshielded アドレスか確認、SYNCED を待つ"],
 ]
 t3 = [
     ["症状", "原因", "対処"],
-    ["ウォレットが見つかりません（file://）", "file:// ではウォレットが組み込まれない（#33）", "http で開く"],
+    ["ウォレットが見つかりません（file://）", "file:// ではウォレットが組み込まれない", "http で開く"],
     ["… window.midnight がありません", "拡張が無効 / サイトへのアクセス制限", "「すべてのサイト」にして再読み込み"],
-    ["Lace で balanceUnsealedTransaction … Internal Server Error", "Lace の接続先（Blockfrost）が古いチェーン（#36）", "1AM を使う"],
+    ["Lace で balanceUnsealedTransaction … Internal Server Error", "Lace の接続先（Blockfrost）が古いチェーン（2026-11-10 時点）", "1AM を使う"],
     ["Lace にリセット前の残高が出る / Faucet の分が出ない", "同上。再同期しても直らない", "1AM を使う"],
     ["No account is connected for this dApp", "設定変更・ロックなどで接続が切れた", "DApp から接続し直す"],
-    ["以前の残高・コントラクトが見つからない", "Preview がリセットされた（#35）", "1.5 で確認 → 取り直し・デプロイし直し"],
+    ["以前の残高・コントラクトが見つからない", "Preview がリセットされた", "1.5 で確認 → 取り直し・デプロイし直し"],
 ]
 for i, (rows, sub) in enumerate([(t1, "ツール・ビルド"), (t2, "Docker・DUST"), (t3, "ウォレット・ネットワーク")]):
     s = new_slide(f"9. トラブルシューティング（{i + 1}/3）{sub}", "9. トラブル")
@@ -620,7 +622,7 @@ table(s, Inches(6.8), Inches(1.35), Inches(5.9), [
     ["リポジトリ", "`https://github.com/101nimura/midnight_td_demo"],
     ["公式ドキュメント", "`https://docs.midnight.network/guides/networks-and-environments"],
 ], col_w=[1.6, 4.3], size=11, row_h=Inches(0.55))
-callout(s, Inches(6.8), Inches(5.4), Inches(5.9), Inches(1.3), "初版（11/2・ledger 8）の組み合わせは使えない", [
+callout(s, Inches(6.8), Inches(5.4), Inches(5.9), Inches(1.3), "旧版（ledger 8）の組み合わせは使えない", [
     "Compact 0.31.1 / midnight-js 4.1.1 / Proof Server 8.0.3 / Lace"])
 
 # 25. 付録: Lace について
@@ -644,7 +646,7 @@ table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
     ["チェーンの状態", "バイト列 + era で届く。自分の runtime で復号（deserialize({ v9: ContractState })）"],
     ["ZK 鍵の配信", "keys/・zkir/ に加えて compiler/（マニフェスト）も配信。ledger 9 の証明鍵は 1 回路 約 11MB"],
 ], col_w=[2.8, 9.3], size=13, row_h=Inches(0.72))
-callout(s, Inches(0.6), Inches(6.55), Inches(12.1), Inches(0.45), "詳細: ISSUES.md #38、midnight-js の docs/releases/v5.0.0/migration-guide.md", [], kind="ok", size=12)
+callout(s, Inches(0.6), Inches(6.55), Inches(12.1), Inches(0.45), "詳細: midnight-js の docs/releases/v5.0.0/migration-guide.md", [], kind="ok", size=12)
 
 prs.save(OUT)
 print(f"saved {OUT} ({page['n']} slides)")

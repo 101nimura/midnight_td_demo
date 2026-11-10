@@ -5,18 +5,9 @@ Windows 11 の PC で、Midnight（Preview ネットワーク）の DApp を**�
 - 本リポジトリのデモ（Pactora トークン化預金デモ）の動かし方は、[README.md](../README.md) を参照してください
 - 想定する読者: Windows で開発をしている人。ブロックチェーンの経験は不要です
 - 所要時間: 約 2〜3 時間（ダウンロード・DUST がたまるのを待つ時間を含みます）
-- 本書は、実際に構築したときのつまずき（2026-11-02 の初版、2026-11-10 の改訂）を踏まえて、**つまずきにくい順序**で書いています。順番どおりに進めてください
-
-> **2026-11-10 改訂のポイント**（初版から大きく変わった点）
->
-> | 項目 | 初版（11/2） | 改訂（11/10） | 理由 |
-> |---|---|---|---|
-> | Preview ネットワーク | ledger 8 のチェーン | **11/7 に ledger 9 の新しいチェーンとして再起動** | 公式の更新。初版で用意した tNIGHT・DUST・コントラクトは消えた（ISSUES.md #35） |
-> | Compact コンパイラ | 0.31.1 | **0.36.0** | ledger 9 への対応（#37, #38） |
-> | SDK | midnight-js 4.1.1 | **midnight-js 5.0.0** | 同上 |
-> | Proof Server | 8.0.3 | **9.0.0** | 同上 |
-> | ウォレット | Lace | **1AM**（Lace は今の Preview で使えない） | Lace の接続先（Blockfrost）が古いチェーンのまま止まっている（#36） |
-> | DUST の用意 | 代替ツール（`dust-designate.cmd`） | **1AM の画面で生成** | ツールは ledger 8 用で使えない（#38） |
+- 本書の手順・バージョンは **2026-11-10 に動作を確認したもの**です。Midnight は更新が速く、テストネット（Preview）のリセットや版の更新で手順が変わることがあります。作業の前に必ず 1.5 で最新の状態を確認してください
+- 順番どおりに進めてください（後の章が前の章の結果を使います）
+- ウォレットや外部サービスの画面は、バージョンによって文言や配置が変わることがあります。ボタンの名前が違う場合は、近いものを探してください
 
 ---
 
@@ -67,14 +58,14 @@ Windows 11 の PC で、Midnight（Preview ネットワーク）の DApp を**�
 
 | 章 | 作業 | 目安 |
 |---|---|---|
-| 1 | 事前確認（権限・ネットワーク・Preview の状態）、Git | 15 分 |
+| 1 | 事前確認（権限・ネットワーク・Preview の状態）、Git とリポジトリのクローン | 20 分 |
 | 2 | WSL2 と Ubuntu | 20 分 |
 | 3 | Node.js（WSL 内） | 10 分 |
 | 4 | Compact コンパイラ（WSL 内） | 10 分 |
 | 5 | Rancher Desktop と Proof Server | 30 分 |
 | 6 | 1AM ウォレット | 15 分 |
 | 7 | tNIGHT と DUST を用意する | 10〜30 分 |
-| 8 | 開発環境の確認（サンプルのコンパイル・テスト・ビルド） | 20 分 |
+| 8 | 開発環境の確認（リポジトリのコンパイル・テスト・ビルド・ウォレット接続） | 20 分 |
 
 ---
 
@@ -108,23 +99,38 @@ Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -like '*netsko
 | 実行する場所 | 注意点 |
 |---|---|
 | **PowerShell** | 基本はここ。`*.cmd`（Windows のバッチファイル）は `.\xxx.cmd` で実行する |
-| **WSL の bash**（`user@PC:/mnt/c/...$`） | `$` で始まる行はここで実行する。**`*.cmd` はここでは動かない**（`.\xxx.cmd: command not found`。11/10 に実際に発生） |
+| **WSL の bash**（`user@PC:/mnt/c/...$`） | `$` で始まる行はここで実行する。**`*.cmd` はここでは動かない**（`.\xxx.cmd: command not found` になる） |
 | Git Bash | `wsl` を呼ぶとパスが書き換えられて失敗する（`/mnt/c/...` が `C:/Program Files/Git/mnt/c/...` になる）。使う場合は先頭に `MSYS_NO_PATHCONV=1` を付ける |
 
-### 1.4 Git のインストール
+### 1.4 Git のインストールとリポジトリのクローン
 
-`git --version` でバージョンが表示されれば不要です。表示されない場合は、https://git-scm.com/download/win からインストールします。設定はすべて既定のままで構いません。
+**① Git for Windows**: `git --version` でバージョンが表示されれば不要です。表示されない場合は、https://git-scm.com/download/win からインストールします。設定はすべて既定のままで構いません。
+
+**② リポジトリをクローンする**: Proof Server の起動設定（5 章）や確認用のスクリプト（8 章）がリポジトリに入っているので、先にクローンします。置き場所は、**空白や日本語を含まず、OneDrive で同期されていないフォルダ**にします（例: `C:\work`）。
+
+```powershell
+mkdir C:\work -Force
+cd C:\work
+git clone https://github.com/101nimura/midnight_td_demo.git
+cd midnight_td_demo
+```
+
+以降、このフォルダ（例: `C:\work\midnight_td_demo`）を **「リポジトリのフォルダ」** と呼びます。PowerShell のコマンドは、特に断りがなければここで実行します。
+
+> - ダウンロードには、コンパイル済みのコントラクト（ZK 証明鍵 約 108MB）が含まれます
+> - スクリプト（`*.cmd`）は自分の置き場所を基準に動くので、どのフォルダにクローンしても書き換えは不要です
+> - `*.sh` の改行は `.gitattributes` で LF に固定しています。WSL で `$'\r': command not found` と出たら、`git rm --cached -r .` → `git reset --hard` を実行してください
 
 ### 1.5 Preview の状態を確認する（毎回・作業の前に）
 
-Preview はリセットされることがあります（2026-11-07 に実際にリセットされました）。**以前に用意した tNIGHT・DUST・コントラクトが使えるか**を、作業の前に確認します。PowerShell で次を実行します。
+Preview はリセット（作り直し）されることがあります（例: 2026-11-07 に ledger 9 の新しいチェーンとして再起動）。**以前に用意した tNIGHT・DUST・コントラクトが使えるか**を、作業の前に確認します。PowerShell で次を実行します。
 
 ```powershell
-curl.exe -sS --ssl-no-revoke -H "Content-Type: application/json" -d '{\"query\":\"{ block { height timestamp } }\"}' https://indexer.preview.midnight.network/api/v4/graphql
+(Invoke-RestMethod -Method Post -Uri 'https://indexer.preview.midnight.network/api/v4/graphql' -ContentType 'application/json' -Body '{"query":"{ block { height timestamp } }"}').data.block
 ```
 
-- `{"data":{"block":{"height":…}}}` が返れば Preview は動いています
-- **前回より `height`（ブロック高）が小さくなっていたら、リセットされています**。tNIGHT と DUST を取り直し（7 章）、コントラクトはデプロイし直します
+- `height`（ブロック高）と `timestamp` が表示されれば Preview は動いています。**`height` を控えておきます**
+- **前回より `height` が小さくなっていたら、リセットされています**。tNIGHT と DUST を取り直し（7 章）、コントラクトはデプロイし直します
 - ledger の版が上がっていないかも確認します。最新の情報と対応表は公式ドキュメント（https://docs.midnight.network/guides/networks-and-environments ）にあります。版が上がっていたら、付録 A のバージョン一式を更新する必要があります
 
 ---
@@ -218,7 +224,7 @@ WARN midnight_base_crypto::data_provider: error sending request for url (https:/
 Error: ... Failed to fetch data from https://midnight-s3-fileshare-dev-eu-west-1... after 3 attempts. Giving up.
 ```
 
-これを防ぐため、コンテナに渡す CA バンドルを作ります。本リポジトリのスクリプト（8.1 でクローン）を使う場合は、リポジトリのフォルダで実行します。
+これを防ぐため、コンテナに渡す CA バンドルを作ります。リポジトリのフォルダ（1.4）で実行します。
 
 ```powershell
 .\make-ca-bundle.cmd
@@ -227,7 +233,6 @@ Error: ... Failed to fetch data from https://midnight-s3-fileshare-dev-eu-west-1
 `certs\ca-bundle.crt` ができれば OK です。社内のルート証明書が見つかった場合は、`certs\netskope.pem` にも書き出されます。Zscaler など Netskope 以外の製品の場合は、`.tools\make-ca-bundle.ps1 -Pattern '*zscaler*'` のように製品名を指定してください。
 
 > 本リポジトリの `proof-server.yml` はこのファイルを必ず読み込むので、**TLS 検査の有無にかかわらず**作ってください（TLS 検査がない環境では、標準の証明書だけで作られます）。
-> 先に Proof Server を起動したい場合は、8.1 のクローンを先に行ってください。
 
 ### 5.3 Proof Server の起動
 
@@ -246,7 +251,7 @@ docker compose -f proof-server.yml logs -f     # 確認したら Ctrl+C で抜�
 
 > - PC を再起動したあとは、**Rancher Desktop が Running になってから** `docker compose -f proof-server.yml up -d` を実行します
 > - `8.0.3` と表示される場合は、古いイメージのコンテナが動いています。`up -d` で入れ替えます
-> - ブラウザの DApp からの証明は、ウォレット（1AM）が自分で作ることもできます（11/10 のデプロイでは Proof Server に証明の依頼は届きませんでした）。Proof Server は、CLI・テストの自動化・ローカルで証明したい場合（midnight-js の `httpClientProofProvider`）に使います
+> - ブラウザの DApp から 1AM を使う場合、証明はウォレット側で作られるため、ローカルの Proof Server がなくても動作します（2026-11-10 に確認）。Proof Server は、CLI・テストの自動化・ローカルで証明したい場合（midnight-js の `httpClientProofProvider`）に使います
 
 ---
 
@@ -308,7 +313,7 @@ docker compose -f proof-server.yml logs -f     # 確認したら Ctrl+C で抜�
 
 ![1AM に tNIGHT が着金した状態（DUST はまだ 0.0）](images/1am-night-received.png)
 
-> Faucet には API もありますが、初版の構築時には「OK」が返っても実際には届かないことがありました。**ブラウザの画面から請求する**のが確実です。
+> Faucet には API もありますが、「OK」が返っても実際には届かないことがありました。**ブラウザの画面から請求する**のが確実です。
 
 ### 7.2 DUST を生成する（1AM の画面から）
 
@@ -317,7 +322,7 @@ docker compose -f proof-server.yml logs -f     # 確認したら Ctrl+C で抜�
    - 受け取った NIGHT（unshielded の UTXO）を DUST 生成に登録するトランザクションです
    - 「DESIGNATED DUST ADDRESS (OPTIONAL)」は空欄のままで構いません（自分のウォレットに DUST がたまります）。ほかのウォレットの DUST アドレスを入れると、そちらに DUST がたまります
 3. 登録が終わると、TRANSACTIONS に `Self … UNSHIELDED +5000 NIGHT / −5000 NIGHT` のような行が出ます
-4. YOUR DUST の画面で、**Available Balance** が増えていくことを確認します（構築時は約 0.04 DUST/秒。登録から数分で数百 DUST になりました）
+4. YOUR DUST の画面で、**Available Balance** が増えていくことを確認します（目安: 5,000 tNIGHT を登録した場合で約 0.04 DUST/秒。数分で数百 DUST になります）
 
 ![YOUR DUST の画面（GENERATE DUST・残高・生成速度）](images/1am-your-dust.png)
 
@@ -329,32 +334,15 @@ docker compose -f proof-server.yml logs -f     # 確認したら Ctrl+C で抜�
 | Pending Maturity | これから使えるようになる DUST |
 | DUST GENERATION: +0.04 DUST/s | DUST がたまる速さ |
 
-> **初版の代替ツール（`dust-install.cmd` / `dust-designate.cmd`）は使えません。** ledger 8 用のまま（testkit-js 4.x）のためです（ISSUES.md #38）。
+> リポジトリにある `dust-install.cmd` / `dust-designate.cmd`（DUST 生成の代替ツール）は、旧版（ledger 8）用のため、今の Preview では使えません。
 
 ---
 
-## 8. 開発環境の確認（本リポジトリをサンプルに）
+## 8. 開発環境の確認
 
-ここまでの環境で、コンパイル・テスト・ビルド・ウォレット接続が通るかを、本リポジトリを使って確認します。
+ここまでの環境で、コンパイル・テスト・ビルド・ウォレット接続が通るかを、リポジトリ（1.4 でクローン）を使って確認します。PowerShell で、リポジトリのフォルダで実行します。
 
-### 8.1 クローン
-
-置き場所は、**空白や日本語を含まず、OneDrive で同期されていないフォルダ**にします（例: `C:\work`）。
-
-```powershell
-mkdir C:\work -Force
-cd C:\work
-git clone https://github.com/101nimura/midnight_td_demo.git
-cd midnight_td_demo
-```
-
-以降、このフォルダを **「リポジトリのフォルダ」** と呼びます。
-
-> - ダウンロードには、コンパイル済みのコントラクト（ZK 証明鍵 約 108MB）が含まれます
-> - スクリプト（`*.cmd`）は自分の置き場所を基準に動くので、どのフォルダにクローンしても書き換えは不要です
-> - `*.sh` の改行は `.gitattributes` で LF に固定しています。WSL で `$'\r': command not found` と出たら、`git rm --cached -r .` → `git reset --hard` を実行してください
-
-### 8.2 依存パッケージ・コンパイル・テスト・ビルド
+### 8.1 依存パッケージ・コンパイル・テスト・ビルド
 
 ```powershell
 .\npm-install.cmd         # 依存パッケージ（数分）
@@ -365,7 +353,7 @@ cd midnight_td_demo
 
 > `compile-contract.cmd` は、コンパイル済みの成果物（`contract/managed/tdeposit`）を作り直します。確認のためだけに実行した場合は、`git checkout -- contract/managed` でリポジトリの版に戻してください（`compiler/contract-manifest.json` の `compiler-version` が `0.36.0` になっていればコンパイラは正しく動いています）。
 
-### 8.3 ウォレットとの接続を確認する
+### 8.2 ウォレットとの接続を確認する
 
 ```powershell
 .\start-dev.cmd           # 開発サーバー
@@ -376,7 +364,7 @@ cd midnight_td_demo
 > - `Port 5173 is already in use` が出たら、すでに別のサーバーが起動しています。そのサーバーを止めるか、そのまま使ってください
 > - WSL から Windows 側のファイルの変更は通常検知できないため、`vite.config.ts` でポーリング監視にしています。設定ファイルを変更した場合は、サーバーを再起動してください
 
-### 8.4 チェックリスト
+### 8.3 チェックリスト
 
 | # | 確認項目 | 期待する結果 |
 |---|---|---|
@@ -388,7 +376,7 @@ cd midnight_td_demo
 | 6 | 1AM の右上 | `PREVIEW ● SYNCED`、DUST が 0 より大きい |
 | 7 | `run-tests.cmd` | 9 passed |
 | 8 | `build-pactora.cmd` | エラーなく終わる |
-| 9 | 開発サーバーでウォレットに接続（8.3） | 接続済み、`network=preview`、DUST が OK |
+| 9 | 開発サーバーでウォレットに接続（8.2） | 接続済み、`network=preview`、DUST が OK |
 
 ---
 
@@ -417,21 +405,21 @@ cd midnight_td_demo
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| DApp で「ウォレットが見つかりません。file:// で開いています」 | `file://` で開くと、許可設定を ON にしてもウォレットが組み込まれない（#33） | http（開発サーバーなど）で開く |
+| DApp で「ウォレットが見つかりません。file:// で開いています」 | `file://` で開くと、許可設定を ON にしてもウォレットが組み込まれない | http（開発サーバーなど）で開く |
 | DApp で「…見つかりません。window.midnight がありません」 | 拡張機能が無効 / サイトへのアクセスが制限されている | 拡張機能の「詳細」→「サイトへのアクセス」を「すべてのサイト」にして再読み込み |
-| Lace で、トランザクションが `balanceUnsealedTransaction … Internal Server Error` で失敗する | Lace の接続先（Blockfrost）がリセット前のチェーンのままで、インデクサが 500 を返す（#36）。Lace の設定では変更できない | **1AM を使う** |
+| Lace で、トランザクションが `balanceUnsealedTransaction … Internal Server Error` で失敗する | Lace の接続先（Blockfrost）がリセット前のチェーンのままで、インデクサが 500 を返す（2026-11-10 時点）。Lace の設定では変更できない | **1AM を使う** |
 | Lace に、リセット前の DUST・NIGHT が表示され続ける／Faucet の tNIGHT が表示されない | 同上（Lace が古いチェーンを見ている）。再同期しても直らない | 1AM を使う |
 | `[InternalError] No account is connected for this dApp. Please reconnect.` | ウォレットの設定を変えた・ロックした・アカウントを切り替えたため、DApp との接続が切れた | DApp から接続し直す（ページの再読み込み） |
 | 「ウォレットのネットワーク (…) が preview ではありません」 | ウォレットのネットワークが違う | 1AM のメニューで PREVIEW に切り替える（6.3） |
 | Faucet が成功と表示されたのに着金しない | 送り先のアドレス違い / ウォレットが同期していない | unshielded アドレス（`mn_addr_preview1…`）に送ったか確認。`SYNCED` になるまで待つ |
-| 以前の残高・コントラクトが見つからない | Preview がリセットされた（#35） | 1.5 で確認し、tNIGHT・DUST を取り直してデプロイし直す |
+| 以前の残高・コントラクトが見つからない | Preview がリセットされた | 1.5 で確認し、tNIGHT・DUST を取り直してデプロイし直す |
 
 **DUST**
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | DUST がずっと 0 | DUST 生成を登録していない / 登録直後 | 7.2 の GENERATE DUST。登録後に数分待つ |
-| `dust-designate.cmd` が使えない | 初版の代替ツールは ledger 8 用（#38） | 1AM の画面で DUST を生成する（7.2） |
+| `dust-designate.cmd` が使えない | 旧版（ledger 8）用のツール | 1AM の画面で DUST を生成する（7.2） |
 
 ---
 
@@ -452,7 +440,7 @@ cd midnight_td_demo
 | Node.js（WSL） | 24.x（22.12 以上） |
 | TypeScript / Vite | 5.9 / 8.x |
 
-> 初版（2026-11-02、ledger 8）は Compact 0.31.1 / compact-runtime 0.16.0 / midnight-js 4.1.1 / DApp Connector API 4.0.1 / Proof Server 8.0.3 でした。今の Preview では使えません。
+> 旧版（ledger 8）の組み合わせ（Compact 0.31.1 / compact-runtime 0.16.0 / midnight-js 4.1.1 / Proof Server 8.0.3）は、今の Preview では使えません。
 
 ## 付録 B. 接続先（Preview）
 
@@ -473,7 +461,7 @@ cd midnight_td_demo
 
 ## 付録 C. DApp を開発するときの注意（midnight-js 5.0.0）
 
-本リポジトリを ledger 9 に移行したときに必要だった点です（詳細は ISSUES.md #38）。
+midnight-js 5.0.0（ledger 9）で DApp を作るときに注意する点です。詳しくは、midnight-js の移行ガイド（付録 B）を参照してください。
 
 | 項目 | 内容 |
 |---|---|
