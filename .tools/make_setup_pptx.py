@@ -110,7 +110,7 @@ def new_slide(title, section=None):
         s.shapes[-1].text_frame.paragraphs[0].alignment = PP_ALIGN.RIGHT
     tb = textbox(s, Inches(12.2), Inches(7.05), Inches(0.9), Inches(0.35), [str(page["n"])], size=10, color=MUTED)
     tb.text_frame.paragraphs[0].alignment = PP_ALIGN.RIGHT
-    textbox(s, Inches(0.5), Inches(7.05), Inches(8), Inches(0.35), ["Midnight 開発環境 構築手順書（Windows 版）"], size=10, color=MUTED)
+    textbox(s, Inches(0.5), Inches(7.05), Inches(8), Inches(0.35), ["Midnight 開発環境 構築手順書（Windows 版）2026-11-10 改訂"], size=10, color=MUTED)
     return s
 
 
@@ -193,6 +193,19 @@ def arrow(slide, x, y, w, h):
     return a
 
 
+
+
+PALE = RGBColor(0xA9, 0xB6, 0xD6)
+BORDER = RGBColor(0xD5, 0xDB, 0xE8)
+
+
+def two_col_pic(s, lines, img, size=15, left_w=5.6, pic_top=1.35, pic_h=5.4):
+    """左に説明、右に画像"""
+    textbox(s, Inches(0.6), Inches(1.35), Inches(left_w), Inches(5.5), lines, size=size)
+    x = Inches(0.6 + left_w + 0.3)
+    picture(s, IMG / img, x, Inches(pic_top), SW - x - Inches(0.5), Inches(pic_h))
+
+
 # =============================================================================
 # 1. 表紙
 s = prs.slides.add_slide(BLANK)
@@ -200,123 +213,119 @@ page["n"] += 1
 rect(s, 0, 0, SW, SH, NAVY)
 rect(s, Inches(0.8), Inches(3.55), Inches(1.4), Inches(0.08), BLUE)
 textbox(s, Inches(0.8), Inches(1.7), Inches(11.5), Inches(1.0), ["Midnight 開発環境 構築手順書"], size=44, color=WHITE, bold_first=True)
-textbox(s, Inches(0.8), Inches(2.65), Inches(11.5), Inches(0.8), ["Windows 11 × WSL2 × Rancher Desktop × Lace（Preview ネットワーク）"], size=22, color=RGBColor(0xA9, 0xB6, 0xD6))
-textbox(s, Inches(0.8), Inches(3.9), Inches(11.5), Inches(1.8), [
-    "対象: トークン化預金デモ（midnight_td_demo）を動かせる環境を、一から作る",
-    "前提: リポジトリ https://github.com/101nimura/midnight_td_demo をクローンして使う",
-    "範囲: クローン / WSL / Node.js / Compact / Proof Server / Lace（作成・インポート・アドレス）/ tNIGHT・DUST / 起動",
-    "所要時間: 約 2〜3 時間（ダウンロード・同期の待ち時間を含む）",
+textbox(s, Inches(0.8), Inches(2.65), Inches(11.5), Inches(0.8), ["Windows 11 × 1AM ウォレット × Pactora デモ（Preview ネットワーク・ledger 9）"], size=22, color=PALE)
+textbox(s, Inches(0.8), Inches(3.9), Inches(11.5), Inches(2.2), [
+    "対象: Pactora トークン化預金デモ（midnight_td_demo）を動かせる環境を作る",
+    "コース A: 公開中のデモを動かすだけ（1AM + tNIGHT + DUST）… 約 30〜60 分",
+    "コース B: ローカルでビルド・開発する（+ Git / WSL / Node.js / Compact / Docker）… +1〜2 時間",
+    "デモ: https://101nimura.github.io/midnight_td_demo/",
+    "2026-11-10 改訂（Preview の再起動・ledger 9 対応）",
 ], size=16, color=WHITE)
-textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: docs/SETUP.md　／　デモの操作: README.md　／　課題: docs/ISSUES.md"], size=12, color=RGBColor(0x8F, 0x9B, 0xB8))
+textbox(s, Inches(0.8), Inches(6.6), Inches(11.5), Inches(0.5), ["詳細版: docs/SETUP.md　／　デモの操作: README.md　／　課題: docs/ISSUES.md・docs/TOKENIZED_DEPOSIT_ISSUES.md"], size=12, color=RGBColor(0x8F, 0x9B, 0xB8))
 
-# 2. この手順書について
-s = new_slide("この手順書のポイント", "はじめに")
-textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["実際に構築したときのつまずきを踏まえ、「つまずかない順序」で並べています。順番どおりに進めてください。"], size=17)
-pts = [
-    ("クローンして使う", "スクリプトは置き場所を自動判定。改行コードは .gitattributes で固定済み"),
-    ("バージョンを固定", "Compact 0.31.1 / midnight-js 4.1.1 / Proof Server 8.0.3 の組み合わせ"),
-    ("Docker は「Running」を待つ", "起動しきる前の操作は docker_engine エラーになる"),
-    ("社内 TLS 検査に先に対処", "Netskope 等があると Proof Server が起動直後に停止する"),
-    ("DUST は自動では増えない", "登録が必要で、時間とともにたまる。0 だと全操作が失敗"),
-    ("Lace の画面は版で違う", "ボタンが無い場合の代替手段（DUST ツール）を用意"),
-]
-for i, (h, d) in enumerate(pts):
-    col, row = i % 3, i // 3
-    x = Inches(0.6) + col * Inches(4.1)
-    y = Inches(2.15) + row * Inches(2.35)
-    b = rect(s, x, y, Inches(3.85), Inches(2.1), LIGHT, RGBColor(0xD5, 0xDB, 0xE8), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
-    rect(s, x, y, Inches(3.85), Inches(0.09), BLUE)
-    textbox(s, x + Inches(0.2), y + Inches(0.25), Inches(3.5), Inches(1.8), [(h, {"bold": True, "size": 18}), (d, {"size": 14, "color": MUTED})])
+# 2. 改訂のポイント
+s = new_slide("2026-11-10 改訂のポイント", "はじめに")
+table(s, Inches(0.6), Inches(1.3), Inches(12.1), [
+    ["項目", "初版（11/2）", "改訂（11/10）", "理由"],
+    ["Preview", "ledger 8 のチェーン", "11/7 に ledger 9 で再起動", "公式の更新。tNIGHT・DUST・コントラクトは消えた（#35）"],
+    ["ウォレット", "Lace", "1AM", "Lace の接続先（Blockfrost）が古いチェーンのまま（#36）"],
+    ["DUST の用意", "代替ツール（dust-designate）", "1AM の画面で生成", "ツールは ledger 8 用で使えない（#38）"],
+    ["Proof Server", "8.0.3（必須）", "9.0.0（1AM なら不要）", "1AM はウォレット側で証明を作る"],
+    ["SDK / コンパイラ", "midnight-js 4.1.1 / 0.31.1", "midnight-js 5.0.0 / 0.36.0", "ledger 9 への対応（#37, #38）"],
+    ["デモ", "React 版・単一 HTML", "Pactora UI 版（Pages）", "ZK 鍵が約 108MB で HTML に入らない（#38）"],
+], col_w=[1.7, 2.9, 3.0, 4.5], size=13, row_h=Inches(0.62))
+callout(s, Inches(0.6), Inches(5.9), Inches(12.1), Inches(0.95), "11/2 に動いていた環境が、コードを変えずに 1 週間で動かなくなった", [
+    "テストネットはリセット・更新される前提で、毎回 1.3 の「Preview の状態確認」から始めてください。"])
 
 # 3. 全体構成
-s = new_slide("0. 全体構成", "全体像")
-win = rect(s, Inches(0.5), Inches(1.3), Inches(8.6), Inches(5.55), LIGHT, RGBColor(0xC8, 0xCE, 0xDB), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.03)
+s = new_slide("0.1 全体構成", "全体像")
+rect(s, Inches(0.5), Inches(1.3), Inches(8.6), Inches(5.55), LIGHT, RGBColor(0xC8, 0xCE, 0xDB), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.03)
 textbox(s, Inches(0.7), Inches(1.38), Inches(4), Inches(0.4), [("Windows 11", {"bold": True, "size": 15})])
-br = rect(s, Inches(0.8), Inches(1.85), Inches(8.0), Inches(1.45), WHITE, BLUE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
+rect(s, Inches(0.8), Inches(1.85), Inches(8.0), Inches(1.45), WHITE, BLUE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
 textbox(s, Inches(0.95), Inches(1.9), Inches(3), Inches(0.4), [("Chrome / Edge", {"bold": True, "size": 13, "color": BLUE})])
 a1 = rect(s, Inches(1.0), Inches(2.3), Inches(3.6), Inches(0.85), RGBColor(0xE8, 0xEE, 0xFF), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.1)
-shape_text(a1, ["デモアプリ", "localhost:5173 / 単一 HTML"], 14, bold=True)
+shape_text(a1, ["Pactora デモ", "GitHub Pages / localhost:8081"], 14, bold=True)
 a2 = rect(s, Inches(5.0), Inches(2.3), Inches(3.6), Inches(0.85), RGBColor(0xF0, 0xE8, 0xFF), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.1)
-shape_text(a2, ["Lace ウォレット拡張", "署名・手数料(DUST)・証明依頼"], 14, bold=True)
+shape_text(a2, ["1AM ウォレット拡張", "手数料(DUST)・署名・ZK 証明"], 14, bold=True)
 rd = rect(s, Inches(0.8), Inches(3.5), Inches(3.9), Inches(1.5), WHITE, RGBColor(0x2F, 0xBF, 0x71), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
-shape_text(rd, ["Rancher Desktop（Docker）", "Proof Server  :6300", "ZK 証明を生成"], 14, bold=True)
+shape_text(rd, ["Rancher Desktop（Docker）", "Proof Server 9.0.0  :6300", "コース B で必要な場合のみ"], 14, bold=True)
 wsl = rect(s, Inches(4.9), Inches(3.5), Inches(3.9), Inches(1.5), WHITE, WARN_LINE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
-shape_text(wsl, ["WSL2 (Ubuntu)", "Node.js 24（nvm）", "Compact 0.31.1"], 14, bold=True)
+shape_text(wsl, ["WSL2 (Ubuntu)　※コース B のみ", "Node.js 24（ビルド・テスト）", "Compact 0.36.0（変更時のみ）"], 14, bold=True)
 textbox(s, Inches(0.8), Inches(5.25), Inches(8.0), Inches(1.5), [
-    "・Lace → Proof Server に証明を依頼（http://localhost:6300）",
-    "・WSL でビルドし、開発サーバー（Vite）を起動",
-    "・ブラウザ → Midnight Preview（Indexer / Node）へ接続",
+    "・コース A（デモを動かすだけ）は、ブラウザと 1AM だけで動く",
+    "・デモは状態の読み取りに公式 Indexer を使う（ウォレットの接続先に左右されない）",
+    "・手数料の支払い・送信・ZK 証明はウォレット（1AM）に任せる",
 ], size=13)
-net = rect(s, Inches(9.6), Inches(1.3), Inches(3.25), Inches(5.55), NAVY2, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.05)
+rect(s, Inches(9.6), Inches(1.3), Inches(3.25), Inches(5.55), NAVY2, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.05)
 textbox(s, Inches(9.8), Inches(1.45), Inches(3), Inches(5.3), [
     ("Midnight Preview", {"bold": True, "size": 17, "color": WHITE}),
-    ("（インターネット）", {"size": 12, "color": RGBColor(0xA9, 0xB6, 0xD6), "after": 16}),
+    ("ledger 9（11/7 に再起動）", {"size": 12, "color": PALE, "after": 16}),
     ("Node（RPC）", {"bold": True, "size": 14, "color": WHITE}),
-    ("トランザクションの送信", {"size": 12, "color": RGBColor(0xA9, 0xB6, 0xD6), "after": 12}),
+    ("rpc.preview.midnight.network", {"size": 11, "color": PALE, "after": 12}),
     ("Indexer", {"bold": True, "size": 14, "color": WHITE}),
-    ("コントラクトの状態を参照", {"size": 12, "color": RGBColor(0xA9, 0xB6, 0xD6), "after": 12}),
+    ("indexer.preview.midnight.network", {"size": 11, "color": PALE, "after": 12}),
     ("Faucet", {"bold": True, "size": 14, "color": WHITE}),
-    ("テスト用 tNIGHT の配布", {"size": 12, "color": RGBColor(0xA9, 0xB6, 0xD6), "after": 12}),
-    ("S3（パラメータ）", {"bold": True, "size": 14, "color": WHITE}),
-    ("Proof Server が起動時に取得", {"size": 12, "color": RGBColor(0xA9, 0xB6, 0xD6)}),
+    ("faucet.preview.midnight.network", {"size": 11, "color": PALE, "after": 12}),
+    ("GitHub Pages", {"bold": True, "size": 14, "color": WHITE}),
+    ("デモ一式（HTML・JS・ZK 鍵）", {"size": 11, "color": PALE}),
 ])
 arrow(s, Inches(9.15), Inches(3.9), Inches(0.42), Inches(0.4))
 
-# 4. なぜこの構成か
-s = new_slide("0. なぜこの構成なのか", "全体像")
-table(s, Inches(0.6), Inches(1.4), Inches(12.1), [
-    ["判断", "理由（構築時に実際に問題になった点）"],
-    ["ビルドを WSL2 で行う", "Compact コンパイラは Linux / macOS 版のみ。SDK は Node.js 22 以上が必要（公式は 24）"],
-    ["Docker は Rancher Desktop", "Proof Server は Docker イメージで提供（Docker Desktop でも可）"],
-    ["Compact を 0.31.1 に固定", "最新 0.35 は RC 版ランタイム（0.20）向けのコードを出力し、安定版 SDK（0.16）で動かない"],
-    ["Proof Server は 8.0.3", "ledger v8 系の SDK と合わせる。ずれると証明が通らない"],
-    ["Lace の証明はローカルの Proof Server", "ブラウザ内（WASM）はメモリ不足で落ちることがある"],
-], col_w=[3.2, 8.9], size=14, row_h=Inches(0.7))
-callout(s, Inches(0.6), Inches(6.0), Inches(12.1), Inches(0.85), "バージョンは付録の組み合わせから変えないこと", ["ネットワークの更新で組み合わせが変わることがあります。変える場合は公式サンプル（example-bboard）の CI 設定を確認してください。"])
-
-# 5. 用語
-s = new_slide("0. 用語", "全体像")
-table(s, Inches(0.6), Inches(1.4), Inches(12.1), [
-    ["用語", "意味"],
-    ["tNIGHT", "Preview 用の NIGHT トークン。Faucet で無料でもらえる"],
-    ["DUST", "手数料に使うリソース。NIGHT を「DUST 生成」に登録すると、時間とともにたまる。tNIGHT を受け取っただけでは増えない"],
-    ["Proof Server", "トランザクションのゼロ知識証明を作るサーバー。手元の Docker で動かす"],
-    ["unshielded アドレス", "mn_addr_preview1…　Faucet の送り先"],
-    ["shielded アドレス", "mn_shield-addr_preview1…　秘匿トークン用"],
-    ["DUST アドレス", "mn_dust_preview1…　DUST の受け取り先"],
-    ["リカバリーフレーズ", "ウォレットを復元するための 24 単語。他人に教えない・画像で保存しない"],
-], col_w=[3.0, 9.1], size=14, row_h=Inches(0.62))
-
-# 6. 作業の流れ
-s = new_slide("0. 作業の流れ", "全体像")
-steps = [("1", "事前確認|クローン", "15分"), ("2", "WSL2", "20分"), ("3", "Node.js", "10分"), ("4", "Compact", "10分"), ("5", "Docker|Proof|Server", "30分"),
-         ("6", "Lace", "20分"), ("7", "tNIGHT|DUST", "20〜60分"), ("8", "アプリ|起動", "20分"), ("9", "動作|確認", "10分")]
+# 4. 2 つのコースと作業の流れ
+s = new_slide("0.2 2 つのコースと作業の流れ", "全体像")
+table(s, Inches(0.6), Inches(1.3), Inches(12.1), [
+    ["コース", "目的", "必要な章", "目安"],
+    ["A. デモを動かす", "公開中のデモ（GitHub Pages）を操作する", "1 → 2 → 3 → 4", "30〜60 分"],
+    ["B. ローカルでビルド・開発", "ソースの変更、社内での配信、テストの実行", "A に加えて 5", "+1〜2 時間"],
+], col_w=[2.6, 5.0, 2.6, 1.9], size=14, row_h=Inches(0.6))
+steps = [("1", "事前確認|Preview確認", "10分"), ("2", "1AM|ウォレット", "15分"), ("3", "tNIGHT|DUST", "10〜30分"), ("4", "デモ|デプロイ", "10分"),
+         ("5", "ローカル|環境(B)", "1〜2時間"), ("6", "動作|確認", "5分")]
 for i, (n, name, t) in enumerate(steps):
-    x = Inches(0.5) + i * Inches(1.39)
-    c = rect(s, x, Inches(2.0), Inches(1.1), Inches(1.9), BLUE if i not in (4, 6) else WARN_LINE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.12)
+    x = Inches(0.8) + i * Inches(2.05)
+    c = rect(s, x, Inches(3.55), Inches(1.6), Inches(1.6), WARN_LINE if i in (2,) else (MUTED if i == 4 else BLUE), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.12)
     shape_text(c, [n] + name.split("|"), 22, WHITE, bold=True)
     for para in c.text_frame.paragraphs[1:]:
         for r in para.runs:
             r.font.size = Pt(13)
     if i < len(steps) - 1:
-        arrow(s, x + Inches(1.12), Inches(2.82), Inches(0.25), Inches(0.26))
-    textbox(s, x - Inches(0.1), Inches(4.05), Inches(1.3), Inches(0.4), [t], size=13, color=MUTED).text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
-callout(s, Inches(0.6), Inches(4.9), Inches(12.1), Inches(1.6), "時間がかかる・つまずきやすい工程（オレンジ）", [
-    "5: Rancher Desktop の起動待ち、イメージのダウンロード、社内 TLS 検査への対処",
-    "7: Faucet の着金待ち、DUST の生成（Lace の画面にボタンが無い場合は代替ツール。初回同期 10〜15 分）",
-])
+        arrow(s, x + Inches(1.65), Inches(4.2), Inches(0.33), Inches(0.3))
+    textbox(s, x - Inches(0.1), Inches(5.25), Inches(1.8), Inches(0.4), [t], size=13, color=MUTED).text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+callout(s, Inches(0.6), Inches(5.95), Inches(12.1), Inches(0.9), "コース A では Docker・WSL・Node.js・Git は不要", [
+    "3（オレンジ）は DUST がたまるのを待つ時間がかかります。5（グレー）はコース B のみです。"], kind="ok")
+
+# 5. なぜこの構成なのか
+s = new_slide("0.3 なぜこの構成なのか", "全体像")
+table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
+    ["判断", "理由（構築時に実際に問題になった点）"],
+    ["ウォレットは 1AM", "Lace は Preview の接続先（Blockfrost）が古いチェーンのまま止まっている。接続先は利用者も DApp も変更できない"],
+    ["読み取りは公式 Indexer", "ウォレットの接続先が壊れていても、コントラクトの状態を読めるようにする"],
+    ["バージョンを固定", "コンパイラ・ランタイム・SDK・Proof Server・ウォレットの組み合わせが厳密。公式の対応表（Support matrix）に合わせる"],
+    ["ビルドは WSL2", "Compact コンパイラは Linux / macOS 版のみ。SDK は Node.js 22.12 以上"],
+    ["デモはフォルダで配信", "ZK 証明鍵が約 108MB。HTML 1 枚に入れると GitHub の上限超え、JS だけ埋め込んでも起動しなかった"],
+], col_w=[3.0, 9.1], size=14, row_h=Inches(0.75))
+
+# 6. 用語
+s = new_slide("0.4 用語", "全体像")
+table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
+    ["用語", "意味"],
+    ["Preview", "Midnight の公開テストネット。予告なくリセットされることがあり、tNIGHT・DUST・コントラクトがすべて消える"],
+    ["ledger 8 / ledger 9", "台帳の版。2026-11 に 9 へ移行。版が違う SDK・コンパイラ・Proof Server は使えない"],
+    ["tNIGHT", "Preview 用の NIGHT トークン。Faucet で無料でもらえる"],
+    ["DUST", "手数料に使うリソース。NIGHT を「DUST 生成」に登録すると、時間とともにたまる。受け取っただけでは増えない"],
+    ["Proof Server", "ゼロ知識証明を作るサーバー。1AM はウォレット側で証明を作るので、コース A では不要"],
+    ["unshielded アドレス", "mn_addr_preview1…　Faucet の送り先"],
+    ["口座鍵", "デモの中の登場人物（銀行・利用者 A・B）の秘密鍵。ウォレットの鍵とは別で、ブラウザに保存される"],
+], col_w=[3.0, 9.1], size=14, row_h=Inches(0.63))
 
 # 7. 事前確認
 s = new_slide("1. 事前確認", "1. 事前確認")
 textbox(s, Inches(0.6), Inches(1.3), Inches(5.6), Inches(3.2), [
     ("必要なもの", {"bold": True, "size": 18}),
-    "・Windows 11（WSL2 が使えること）",
-    "・管理者権限（WSL・Rancher Desktop の導入）",
-    "・メモリ 16GB 以上推奨 / ディスク空き 20GB 以上",
-    "・Chrome または Edge",
-    ("PowerShell で実行する", {"bold": True, "size": 18}),
-    "・Git Bash から wsl を呼ぶとパスが書き換わる",
-    "  → 使う場合は MSYS_NO_PATHCONV=1 を付ける",
+    "・Chrome（または Edge）。拡張機能を追加できること",
+    "・メモリ 16GB 以上推奨（ブラウザ内で証明を作る）",
+    ("コース B のみ", {"bold": True, "size": 18}),
+    "・Windows 11（WSL2）、管理者権限",
+    "・ディスク空き 20GB 以上",
 ], size=15)
 textbox(s, Inches(6.6), Inches(1.3), Inches(6.2), Inches(0.5), [("社内 TLS 検査（Netskope 等）の有無を確認", {"bold": True, "size": 18})])
 code(s, Inches(6.6), Inches(1.9), Inches(6.2), Inches(1.3), [
@@ -326,381 +335,326 @@ code(s, Inches(6.6), Inches(1.9), Inches(6.2), Inches(1.3), [
 ], size=13)
 table(s, Inches(6.6), Inches(3.4), Inches(6.2), [
     ["結果", "対応"],
-    ["何か表示された", "TLS 検査あり → 5.2 で社内証明書を取り込む"],
-    ["何も表示されない", "TLS 検査なし（5.2 は同じ手順で実行）"],
-], col_w=[2.2, 4.0], size=13)
-callout(s, Inches(6.6), Inches(4.9), Inches(6.2), Inches(1.3), "Windows の curl.exe での接続確認", ["社内環境では証明書の失効確認に失敗することがある（CRYPT_E_NO_REVOCATION_CHECK）→ --ssl-no-revoke を付ける"])
+    ["何か表示された", "TLS 検査あり（コース B の 5.6 で対処）"],
+    ["何も表示されない", "TLS 検査なし"],
+], col_w=[2.2, 4.0], size=13, row_h=Inches(0.5))
+callout(s, Inches(0.6), Inches(5.3), Inches(12.1), Inches(1.4), "Windows の curl.exe は社内環境で失効確認に失敗することがある", [
+    "CRYPT_E_NO_REVOCATION_CHECK が出たら --ssl-no-revoke を付ける。",
+    "PowerShell で実行する前提。Git Bash から wsl を呼ぶ場合は MSYS_NO_PATHCONV=1 を付ける。"])
 
-# 7b. クローン
-s = new_slide("1.4 Git のインストールとリポジトリのクローン", "1. 事前確認")
-textbox(s, Inches(0.6), Inches(1.25), Inches(12), Inches(0.5), ["Git for Windows（https://git-scm.com/download/win、設定は既定のまま）を入れ、空白・日本語・OneDrive を含まないフォルダにクローンする。"], size=15)
-code(s, Inches(0.6), Inches(1.85), Inches(6.3), Inches(1.75), [
+# 8. Preview の状態確認
+s = new_slide("1.3 Preview の状態を確認する（毎回・作業の前に）", "1. 事前確認")
+textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.6), ["Preview はリセットされることがあります（2026-11-07 に実際にリセット）。以前の tNIGHT・DUST・コントラクトが使えるかを先に確認します。"], size=16)
+code(s, Inches(0.6), Inches(2.05), Inches(12.1), Inches(1.15), [
+    "curl.exe -sS --ssl-no-revoke -H \"Content-Type: application/json\" `",
+    "  -d '{\\\"query\\\":\\\"{ block { height timestamp } }\\\"}' https://indexer.preview.midnight.network/api/v4/graphql",
+], size=13)
+table(s, Inches(0.6), Inches(3.45), Inches(12.1), [
+    ["結果", "意味・対応"],
+    ["{\"data\":{\"block\":{\"height\":…}}} が返る", "Preview は動いている"],
+    ["前回より height（ブロック高）が小さい", "リセットされた → tNIGHT・DUST を取り直す（3 章）、デモは「新しいコントラクトで最初から」（4.4）"],
+    ["エラー・応答なし", "ネットワークか Preview の障害。公式ドキュメントで状況を確認"],
+], col_w=[4.3, 7.8], size=14, row_h=Inches(0.62))
+callout(s, Inches(0.6), Inches(6.15), Inches(12.1), Inches(0.7), "最新情報: https://docs.midnight.network/guides/networks-and-environments", [], kind="ok")
+
+# 9. 1AM のインストールとウォレット
+s = new_slide("2.1〜2.2 1AM のインストールとウォレットの用意", "2. 1AM")
+textbox(s, Inches(0.6), Inches(1.3), Inches(6.0), Inches(4.4), [
+    ("インストール", {"bold": True, "size": 18}),
+    "・https://1am.xyz/ から Chrome の拡張機能を追加",
+    "・拡張機能アイコン（パズル）から 1AM を固定しておく",
+    ("A. 新しく作る（推奨）", {"bold": True, "size": 18}),
+    "・リカバリーフレーズを紙に書き写して保管",
+    "・確認の入力 → パスワードを決める",
+    ("B. インポートする", {"bold": True, "size": 18}),
+    "・リカバリーフレーズで復元 → 同期を待つ",
+], size=15)
+callout(s, Inches(6.9), Inches(1.4), Inches(5.8), Inches(2.0), "リカバリーフレーズの扱い", [
+    "スクリーンショット・クラウドに保存しない",
+    "口頭やチャットで伝えない",
+    "デモ・検証専用のウォレットにする",
+])
+callout(s, Inches(6.9), Inches(3.7), Inches(5.8), Inches(2.0), "Lace は今の Preview で使えない", [
+    "接続先（Blockfrost）がリセット前のチェーンのまま",
+    "両方入っている場合、デモは 1AM を優先して接続する",
+    "詳しくは付録「Lace について」",
+])
+
+# 10. Preview の確認とアドレス
+s = new_slide("2.3〜2.4 Preview の確認とアドレス", "2. 1AM")
+two_col_pic(s, [
+    ("Preview を選ぶ", {"bold": True, "size": 18}),
+    "・右上のアカウント（WA など）を押す",
+    "・メニュー上部が PREVIEW か確認（違えば CHANGE）",
+    "・右上に PREVIEW ● SYNCED と出れば同期済み",
+    ("アドレス", {"bold": True, "size": 18}),
+    "・unshielded（mn_addr_preview1…）: Faucet の送り先。RECEIVE で確認",
+    "・shielded: 秘匿トークン用",
+    "・DUST: デモの「ウォレット」画面にも表示",
+    ("アカウントは 1 つで足りる", {"bold": True, "size": 18}),
+    "・登場人物はデモの中の口座鍵で切り替える",
+], "1am-menu-preview.png", size=14, left_w=5.2)
+
+# 11. DUST のしくみ
+s = new_slide("3. DUST のしくみ（ここが一番つまずく）", "3. tNIGHT / DUST")
+flow = [("① Faucet", "tNIGHT を受け取る"), ("② GENERATE DUST", "NIGHT を DUST 生成に登録"), ("③ 待つ", "時間とともに DUST がたまる"), ("④ 操作", "DUST で手数料を払う")]
+for i, (h, d) in enumerate(flow):
+    x = Inches(0.6) + i * Inches(3.1)
+    b = rect(s, x, Inches(1.6), Inches(2.7), Inches(1.6), LIGHT, BORDER, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.08)
+    shape_text(b, [h, d], 18, bold=True)
+    if i < 3:
+        arrow(s, x + Inches(2.75), Inches(2.25), Inches(0.3), Inches(0.3))
+callout(s, Inches(0.6), Inches(3.6), Inches(12.1), Inches(1.5), "DUST が 0 だと、デプロイを含むすべての操作が手数料不足で失敗する", [
+    "tNIGHT を受け取っただけでは DUST は増えない。②の登録が別に必要で、登録後も少しずつたまる（構築時は約 0.04 DUST/秒）。",
+])
+callout(s, Inches(0.6), Inches(5.35), Inches(12.1), Inches(1.3), "初版の代替ツール（dust-install.cmd / dust-designate.cmd）は使えない", [
+    "ledger 8 用（testkit-js 4.x）のまま。今は 1AM の画面から DUST を生成する（3.2）。",
+])
+
+# 12. tNIGHT を受け取る
+s = new_slide("3.1 tNIGHT を受け取る", "3. tNIGHT / DUST")
+two_col_pic(s, [
+    "1. 1AM の RECEIVE で unshielded アドレスをコピー",
+    "2. ブラウザで公式 Faucet を開く",
+    ("　https://faucet.preview.midnight.network/", {"font": MONO, "size": 13}),
+    "3. アドレスを貼り付けて請求",
+    "4. 数分後、UNSHIELDED BALANCE が 5000.0 になり、TRANSACTIONS に Received +5000 NIGHT が出る",
+    ("この時点では DUST は 0.0", {"bold": True, "size": 15, "color": WARN_LINE}),
+    ("Faucet の API は「OK」でも届かないことがあった。ブラウザの画面から請求する", {"size": 13, "color": MUTED}),
+], "1am-night-received.png", size=15, left_w=5.2)
+
+# 13. DUST を生成する
+s = new_slide("3.2 DUST を生成する（1AM の画面から）", "3. tNIGHT / DUST")
+two_col_pic(s, [
+    "1. ホームで YOUR DUST を押す",
+    "2. DUST GENERATION の GENERATE DUST を押して承認",
+    ("　DESIGNATED DUST ADDRESS は空欄でよい", {"size": 13, "color": MUTED}),
+    "3. TRANSACTIONS に Self（+5000 / −5000 NIGHT）の行が出る",
+    "4. Available Balance が増えていくのを確認",
+    "5. 右上の DUST が 0 より大きくなれば準備完了",
+    ("NIGHT UTXOS AVAILABLE: 0 → 登録済み。たまるのを待つ", {"size": 13, "color": MUTED}),
+], "1am-your-dust.png", size=15, left_w=5.2)
+
+# 14. デモを開いて接続
+s = new_slide("4.1〜4.2 デモを開いてウォレットに接続する", "4. デモ")
+textbox(s, Inches(0.6), Inches(1.3), Inches(5.4), Inches(1.6), [
+    ("https://101nimura.github.io/midnight_td_demo/", {"bold": True, "size": 15, "font": MONO}),
+    "・初回は JS・WASM（約 26MB）の読み込みに十数秒",
+    "・失敗時は「デモの起動に失敗しました」が表示される",
+    "・file:// で開く方法は使えない（#33）",
+], size=14)
+table(s, Inches(0.6), Inches(3.15), Inches(5.4), [
+    ["S-2 の項目", "期待する表示"],
+    ["ウォレットに接続", "接続済み（1AM / preview）"],
+    ["DUST の確認", "OK（0 なら 3.2 へ）"],
+    ["Proof Server", "1AM なら「停止中」でも可"],
+    ["口座鍵", "作成済み"],
+    ["コントラクト", "初回は「ログイン後に作成」"],
+], col_w=[2.0, 3.4], size=13, row_h=Inches(0.55))
+picture(s, IMG / "pactora-start.png", Inches(6.3), Inches(1.35), Inches(6.5), Inches(5.4))
+
+# 15. デプロイ
+s = new_slide("4.3 デプロイ（提供開始）を確認する", "4. デモ")
+textbox(s, Inches(0.6), Inches(1.25), Inches(12.1), Inches(1.0), [
+    "1. 小林 修（△△銀行）でログイン → ガイドのステップ 1 → 「提供を開始（デプロイ）」　2. 「承認して実行」→ 1AM の承認画面で承認",
+    "3. 1〜数分で「預金トークンの提供を開始しました」、状態が「稼働中」になれば成功",
+], size=14)
+picture(s, IMG / "pactora-deploying.png", Inches(0.6), Inches(2.35), Inches(5.95), Inches(4.4))
+picture(s, IMG / "pactora-deployed.png", Inches(6.75), Inches(2.35), Inches(5.95), Inches(4.4))
+
+# 16. 結果の確認と 2 回目以降
+s = new_slide("4.3〜4.4 結果の確認と、2 回目以降の使い方", "4. デモ")
+textbox(s, Inches(0.6), Inches(1.3), Inches(5.6), Inches(1.7), [
+    ("デプロイ後にすること", {"bold": True, "size": 17}),
+    "・右上「ウォレット・口座鍵」→「口座鍵のエクスポート」で鍵を控える（銀行の鍵がないと、別の環境から銀行の操作ができない）",
+    "・1AM の TRANSACTIONS に DApp … github.io（CONFIRMED）が出る",
+], size=14)
+table(s, Inches(0.6), Inches(3.4), Inches(5.6), [
+    ["状況", "操作"],
+    ["同じブラウザ・URL", "そのまま開く"],
+    ["別のブラウザ・URL", "S-2 で口座鍵のインポートと既存アドレスの指定"],
+    ["Preview がリセットされた", "「初期化」→「新しいコントラクトで最初から」"],
+], col_w=[2.1, 3.5], size=13, row_h=Inches(0.65))
+picture(s, IMG / "1am-transactions.png", Inches(6.5), Inches(1.35), Inches(6.3), Inches(5.4))
+
+# 17. クローンと .cmd の実行場所
+s = new_slide("5.1〜5.2 クローンと .cmd の実行場所（コース B）", "5. ローカル")
+code(s, Inches(0.6), Inches(1.35), Inches(6.0), Inches(1.6), [
     "mkdir C:\\work -Force",
     "cd C:\\work",
     "git clone https://github.com/101nimura/midnight_td_demo.git",
-    "cd midnight_td_demo     # = リポジトリのフォルダ",
+    "cd midnight_td_demo",
 ], size=13)
-textbox(s, Inches(7.2), Inches(1.85), Inches(5.5), Inches(1.8), [
-    "・ダウンロードは約 100MB（ZK 証明鍵・単一 HTML を含む）",
-    "・以降の PowerShell コマンドはリポジトリのフォルダで実行",
-    "・*.cmd は自分の場所を基準に動く → どこに置いても書き換え不要",
+textbox(s, Inches(0.6), Inches(3.1), Inches(6.0), Inches(3.5), [
+    "・置き場所は空白・日本語なし、OneDrive 同期外（例: C:\\work）",
+    "・コンパイル済みのコントラクト（ZK 鍵 約 108MB）を含む",
+    "・含まれない: node_modules（npm-install.cmd）、dist-pactora（build-pactora.cmd）、certs（make-ca-bundle.cmd）",
+    "・$'\\r': command not found → git rm --cached -r . → git reset --hard",
 ], size=14)
-table(s, Inches(0.6), Inches(3.85), Inches(12.1), [
-    ["区分", "内容", "用意の仕方"],
-    ["含まれる", "コンパイル済みコントラクト（ZK 鍵込み）・ソース・スクリプト・docs・単一 HTML", "クローンのみ（再コンパイル不要）"],
-    ["含まれない", "node_modules/", "npm-install.cmd（8.1）"],
-    ["含まれない", "certs/（Proof Server 用 CA バンドル）", "make-ca-bundle.cmd（5.2）"],
-    ["含まれない", "tools/dust/node_modules/・DUST ツールのシード", "dust-install.cmd（7.3）・シードは自動作成"],
-], col_w=[1.6, 6.2, 4.3], size=13, row_h=Inches(0.48))
-callout(s, Inches(0.6), Inches(6.35), Inches(12.1), Inches(0.6), "改行コード: *.sh は .gitattributes で LF に固定。$'\\r': command not found が出たら git pull → git rm --cached -r . → git reset --hard", [], size=12)
+table(s, Inches(6.9), Inches(1.35), Inches(5.9), [
+    ["実行する場所", "結果"],
+    ["PowerShell: .\\build-pactora.cmd", "○"],
+    ["エクスプローラーでダブルクリック", "○"],
+    ["WSL の bash で .\\xxx.cmd", "✕ command not found（11/10 に発生）"],
+    ["Git Bash で wsl …", "パスが書き換わる → MSYS_NO_PATHCONV=1"],
+], col_w=[3.3, 2.6], size=13, row_h=Inches(0.62))
+callout(s, Inches(6.9), Inches(4.75), Inches(5.9), Inches(1.6), ".cmd は Windows のバッチファイル", [
+    "WSL の中で実行したい場合は、中身と同じコマンドを使う（例: bash .tools/npm.sh run build:pactora）。"])
 
-# 8. WSL
-s = new_slide("2. WSL2 と Ubuntu", "2. WSL2")
-textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5), [("管理者の PowerShell で実行", {"bold": True, "size": 18})])
-code(s, Inches(0.6), Inches(1.9), Inches(12.1), Inches(1.0), ["wsl --install -d Ubuntu", "# 再起動後、Ubuntu のユーザー名・パスワードを設定（Ubuntu = 24.04 LTS）"], size=15)
-textbox(s, Inches(0.6), Inches(3.2), Inches(12), Inches(0.5), [("確認", {"bold": True, "size": 18})])
-code(s, Inches(0.6), Inches(3.8), Inches(12.1), Inches(1.4), ["wsl -l -v", "#   NAME            STATE      VERSION", "# * Ubuntu          Running    2      ← VERSION 2 なら OK"], size=15)
-callout(s, Inches(0.6), Inches(5.55), Inches(12.1), Inches(1.0), "ディストリビューション名", ["スクリプトは「Ubuntu」で動く。別名（例: Ubuntu-24.04）なら環境変数 WSL_DISTRO に設定する。"], kind="ok")
-
-# 9. Node
-s = new_slide("3. Node.js（WSL 内）", "3. Node.js")
-textbox(s, Inches(0.6), Inches(1.3), Inches(12), Inches(0.5), [("wsl -d Ubuntu で Ubuntu に入り、nvm で Node.js 24 を入れる", {"bold": True, "size": 18})])
-code(s, Inches(0.6), Inches(1.9), Inches(12.1), Inches(2.2), [
+# 18. WSL・Node・Compact
+s = new_slide("5.3〜5.5 WSL2 / Node.js / Compact（コース B）", "5. ローカル")
+code(s, Inches(0.6), Inches(1.35), Inches(6.0), Inches(1.0), [
+    "# 管理者の PowerShell",
+    "wsl --install -d Ubuntu      # 再起動 → wsl -l -v で VERSION 2",
+], size=13)
+code(s, Inches(0.6), Inches(2.55), Inches(6.0), Inches(1.6), [
+    "# Ubuntu の中（wsl -d Ubuntu）",
     "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash",
     "source ~/.bashrc",
-    "nvm install 24",
-    "node -v        # v24.x と表示されれば OK",
-], size=15)
-callout(s, Inches(0.6), Inches(4.45), Inches(5.9), Inches(1.9), "Windows 側の Node.js は使わない", ["C:\\Program Files\\nodejs が古くても問題なし。", "midnight-js は Node 22 以上が必要。"], kind="ok")
-callout(s, Inches(6.8), Inches(4.45), Inches(5.9), Inches(1.9), "PATH の引き継ぎに注意", ["Windows の PATH（空白を含む）が WSL に引き継がれ、設定が崩れることがある。", "→ プロジェクトでは .tools/env.sh で設定し直してから実行。"])
-
-# 10. Compact
-s = new_slide("4. Compact コンパイラ（WSL 内）", "4. Compact")
-code(s, Inches(0.6), Inches(1.35), Inches(12.1), Inches(2.0), [
-    "curl --proto '=https' --tlsv1.2 -LsSf \\",
-    "  https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh",
-    "source ~/.bashrc",
-    "compact update 0.31.1          # ★ 必ずこのバージョンに固定",
-    "compact compile --version      # 0.31.1",
-], size=15)
-callout(s, Inches(0.6), Inches(3.7), Inches(5.9), Inches(2.6), "最新版を使わない", [
-    "compact update だけだと最新（0.35 等）が入る。",
-    "出力コードが compact-runtime 0.20 向けになり、安定版 midnight-js 4.1.1（0.16）では",
-    "checkRuntimeVersion エラーで動かない。",
-])
-callout(s, Inches(6.8), Inches(3.7), Inches(5.9), Inches(2.6), "Windows の compact.exe と別物", [
-    "C:\\Windows\\System32\\compact.exe は NTFS 圧縮ツール。",
-    "PowerShell で compact と打つとこちらが動く。",
-    "Compact コンパイラは必ず WSL の中で実行する。",
-])
-
-# 11. Rancher
-s = new_slide("5.1 Rancher Desktop のインストール", "5. Docker")
-textbox(s, Inches(0.6), Inches(1.3), Inches(6.3), Inches(4.5), [
-    "1. https://rancherdesktop.io/ から Windows 版を入手・インストール（管理者権限）",
-    "2. 初回設定",
-    ("    Container Engine: dockerd (moby)", {"bold": True}),
-    "    （containerd だと docker コマンドが使えない）",
-    "    Kubernetes: 不要なら OFF（ON だと起動に数分余計にかかる）",
-    ("3. 画面下部が「Running」になるまで待つ", {"bold": True}),
-    "4. PowerShell で確認",
-], size=16)
-code(s, Inches(0.6), Inches(5.0), Inches(6.3), Inches(0.75), ["docker info     # Server Version: ... が出れば OK"], size=14)
-callout(s, Inches(7.2), Inches(1.3), Inches(5.5), Inches(3.0), "起動しきる前に docker を実行すると…", [
-    "error during connect: in the default daemon",
-    "configuration on Windows ... open //./pipe/docker_engine:",
-    "The system cannot find the file specified.",
-    "",
-    "→ 故障ではない。Running になるまで待って再実行。",
-])
-callout(s, Inches(7.2), Inches(4.6), Inches(5.5), Inches(1.6), "PC を再起動したあと", ["Rancher Desktop が Running → Proof Server 起動、の順番を毎回守る。"], kind="ok")
-
-# 12. TLS
-s = new_slide("5.2 Proof Server 用の CA バンドルを作る（全員）", "5. Docker")
-textbox(s, Inches(0.6), Inches(1.25), Inches(12), Inches(0.5), ["Proof Server は起動時に S3 からパラメータを取得する。社内証明書をコンテナが信頼できないと失敗して停止する。"], size=15)
-steps3 = [("Windows 証明書ストア", "社内ルート証明書\n（Netskope 等）"), ("make-ca-bundle.cmd", "PEM に書き出し\n標準 CA と結合"), ("certs\\ca-bundle.crt", "CA バンドル"), ("proof-server.yml", "コンテナにマウント\nSSL_CERT_FILE")]
-for i, (h, d) in enumerate(steps3):
-    x = Inches(0.6) + i * Inches(3.15)
-    b = rect(s, x, Inches(1.9), Inches(2.65), Inches(1.4), LIGHT, BLUE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.08)
-    shape_text(b, [h] + d.split("\n"), 14, bold=True)
-    if i < 3:
-        arrow(s, x + Inches(2.7), Inches(2.4), Inches(0.4), Inches(0.4))
-code(s, Inches(0.6), Inches(3.6), Inches(6.2), Inches(1.3), ["# リポジトリのフォルダで", ".\\make-ca-bundle.cmd", "# Zscaler 等: .tools\\make-ca-bundle.ps1 -Pattern '*zscaler*'"], size=13)
-code(s, Inches(7.1), Inches(3.6), Inches(5.6), Inches(1.3), ["# 失敗時のログ（例）", "Failed to fetch data from https://midnight-s3-", "fileshare-dev-eu-west-1... after 3 attempts."], size=12)
-callout(s, Inches(0.6), Inches(5.2), Inches(12.1), Inches(1.3), "TLS 検査がない環境でも実行する", ["proof-server.yml は certs/ca-bundle.crt を必ず読み込む。社内証明書が無ければ標準 CA のみで作成される。"], kind="ok")
-
-# 13. Proof server
-s = new_slide("5.3 Proof Server の起動と確認", "5. Docker")
-code(s, Inches(0.6), Inches(1.35), Inches(7.2), Inches(1.6), [
-    "# リポジトリのフォルダで",
-    "docker compose -f proof-server.yml up -d",
-    "docker compose -f proof-server.yml logs -f   # Ctrl+C で抜ける",
-], size=14)
-textbox(s, Inches(0.6), Inches(3.2), Inches(7.2), Inches(3.0), [
-    "・初回はイメージ（約 1GB）とパラメータのダウンロードで数分",
-    "・ログに listening on: 0.0.0.0:6300 が出れば起動完了",
-    "・パラメータはボリュームに保存 → 2 回目以降は速い",
-    "・停止: docker compose -f proof-server.yml down",
-], size=16)
-ok = rect(s, Inches(8.2), Inches(1.35), Inches(4.5), Inches(2.6), OK_BG, OK_LINE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.06)
-textbox(s, Inches(8.45), Inches(1.5), Inches(4.1), Inches(2.4), [
-    ("確認", {"bold": True, "size": 18}),
-    ("ブラウザで開く", {"size": 14, "color": MUTED}),
-    ("http://localhost:6300/version", {"size": 16, "font": MONO, "bold": True}),
-    ("表示が 8.0.3 なら OK", {"size": 16, "bold": True, "color": RGBColor(0x1E, 0x8E, 0x55)}),
-])
-callout(s, Inches(8.2), Inches(4.25), Inches(4.5), Inches(1.9), "すぐ止まる場合", ["docker ps に出てこない → 5.2（CA バンドル）を確認。", "ログに S3 のエラーが出ているはず。"])
-
-# 14. Lace install & wallet
-s = new_slide("6.1〜6.2 Lace のインストールとウォレットの用意", "6. Lace")
-textbox(s, Inches(0.6), Inches(1.25), Inches(12), Inches(0.5), ["Chrome Web Store / Edge アドオンで「Lace」（提供元: Input Output）を追加。画面は版によって大きく変わるので、近いボタンを探す。"], size=15)
-for i, (title, lines) in enumerate([
-    ("A. 新しく作る（推奨）", [
-        "1. 「ウォレットを作成」",
-        "2. リカバリーフレーズ（24 単語）を紙に書き写して保管",
-        "   ※ スクリーンショット・クラウド保存は不可",
-        "3. 確認のために単語を入力",
-        "4. Lace のパスワードを設定",
-        "→ デモ・検証専用にし、本番資産と分ける",
-    ]),
-    ("B. 既存のウォレットをインポート", [
-        "1. 「ウォレットを復元」（インポート）",
-        "2. 保管しているリカバリーフレーズ（24 単語）を入力",
-        "3. パスワードを設定",
-        "4. 同期の完了を待つ（数分）",
-        "→ フレーズを口頭・チャットで伝えない",
-        "→ 他人の PC へは A を推奨",
-    ]),
-]):
-    x = Inches(0.6) + i * Inches(6.2)
-    rect(s, x, Inches(1.95), Inches(5.9), Inches(4.6), LIGHT, RGBColor(0xD5, 0xDB, 0xE8), shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.04)
-    rect(s, x, Inches(1.95), Inches(5.9), Inches(0.6), BLUE if i == 0 else NAVY2, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.2)
-    textbox(s, x + Inches(0.2), Inches(2.0), Inches(5.5), Inches(0.5), [title], size=18, color=WHITE, bold_first=True, anchor=MSO_ANCHOR.MIDDLE)
-    textbox(s, x + Inches(0.25), Inches(2.75), Inches(5.5), Inches(3.7), lines, size=15)
-
-# 15. Preview & portfolio
-s = new_slide("6.3 Midnight（Preview）を有効にする", "6. Lace")
-picture(s, IMG / "lace-portfolio.png", Inches(0.6), Inches(1.25), Inches(3.5), Inches(5.65))
-textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(4.5), [
-    ("手順", {"bold": True, "size": 18}),
-    "1. 設定（歯車）→ ネットワーク / Midnight の設定で Preview を選ぶ",
-    "2. ポートフォリオに Midnight のアカウント（Midnight #0）が表示されることを確認",
-    "3. tNIGHT を受け取ると、トークン一覧に表示される（7 章）",
-    ("画面下部のメニュー（左から）", {"bold": True, "size": 18}),
-    "ポートフォリオ ／ アクティビティ ／ Lace ／ 設定（歯車）／ 送信",
-    ("上部の ↓ ボタン", {"bold": True, "size": 18}),
-    "受信 = 自分のアドレスの表示（6.5）",
-], size=15)
-
-# 16. Proof server setting
-s = new_slide("6.4 証明サーバー（Proof Server）を設定する", "6. Lace")
-picture(s, IMG / "lace-midnight-settings.png", Inches(0.6), Inches(1.25), Inches(3.5), Inches(5.65))
-textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(1.5), [
-    ("設定 → Midnight設定", {"bold": True, "size": 18}),
-    "1. 「カスタムプルーフサーバー」を選び http://localhost:6300 を指定",
-    "2. 「設定を保存」",
-], size=15)
-table(s, Inches(4.6), Inches(3.1), Inches(8.1), [
-    ["選択肢", "説明"],
-    ["このアプリで実行（WASM）", "ブラウザ内で証明。Docker 不要だが、メモリ不足で Lace が落ちることがある"],
-    ["カスタムプルーフサーバー（推奨）", "5.3 の Proof Server を使用。安定"],
-], col_w=[3.0, 5.1], size=13, row_h=Inches(0.6))
-callout(s, Inches(4.6), Inches(5.2), Inches(8.1), Inches(1.3), "ノード / インデクサーのアドレス", ["Lace が使う接続先（構築時は Blockfrost）。デモアプリは Lace から受け取って使うので変更不要。"], kind="ok")
-
-# 17. Addresses
-s = new_slide("6.5 アドレスの確認と追加", "6. Lace")
-table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
-    ["アドレス", "形式", "使い道", "確認方法"],
-    ["unshielded", "`mn_addr_preview1…", "Faucet から tNIGHT を受け取る", "ポートフォリオで ↓（受信）"],
-    ["shielded", "`mn_shield-addr_preview1…", "秘匿トークンの受け取り", "受信画面で切り替え"],
-    ["DUST", "`mn_dust_preview1…", "DUST の受け取り先", "Lace に出ないことがある → デモアプリ右上（8.4）"],
-], col_w=[1.7, 3.3, 3.2, 3.9], size=14, row_h=Inches(0.62))
-callout(s, Inches(0.6), Inches(4.2), Inches(5.9), Inches(2.2), "アドレス（アカウント）を追加する", [
-    "ポートフォリオ上部「1 ウォレット / ○ アカウント」から「アカウントを追加」。",
-    "新しいアドレスの組ができる。",
-], kind="ok")
-callout(s, Inches(6.8), Inches(4.2), Inches(5.9), Inches(2.2), "デモアプリでは 1 アカウントで足りる", [
-    "銀行・利用者A・利用者B は、アプリ内の「口座鍵」で切り替える。",
-    "手数料はすべて接続中の Lace アカウントが払う。",
-], kind="ok")
-
-# 18. DUST 仕組み
-s = new_slide("7. DUST のしくみ（ここが一番つまずく）", "7. tNIGHT / DUST")
-flow = [("Faucet", "tNIGHT を\n受け取る"), ("DUST 生成に登録", "NIGHT の UTXO を\n登録（Tx）"), ("DUST がたまる", "時間とともに\n少しずつ増える"), ("手数料に使う", "デプロイ・\n各操作")]
-for i, (h, d) in enumerate(flow):
-    x = Inches(0.6) + i * Inches(3.15)
-    b = rect(s, x, Inches(1.5), Inches(2.65), Inches(1.7), BLUE if i != 1 else WARN_LINE, shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.1)
-    shape_text(b, [h] + d.split("\n"), 17, WHITE, bold=True)
-    if i < 3:
-        arrow(s, x + Inches(2.7), Inches(2.15), Inches(0.4), Inches(0.4))
-callout(s, Inches(0.6), Inches(3.55), Inches(12.1), Inches(1.15), "DUST が 0 だと、デプロイを含むすべての操作が手数料不足で失敗する", ["tNIGHT を受け取っただけでは増えない。オレンジの「登録」が別に必要。"])
-textbox(s, Inches(0.6), Inches(4.95), Inches(12.1), Inches(1.8), [
-    ("登録の方法は 2 つ", {"bold": True, "size": 18}),
-    "方法 A: Lace の「Generate tDUST」ボタン（公式手順の Lace 1.36.0 ではトークン画面にある）",
-    "方法 B: 代替ツール（tools/dust）— 別のウォレットの NIGHT から、Lace の DUST アドレス宛てに生成させる（designation）",
-    "         構築時の新しい Lace UI ではボタンが見つからず、方法 B で解決した。リカバリーフレーズは不要。",
-], size=15)
-
-# 19. tNIGHT
-s = new_slide("7.1 tNIGHT を受け取る", "7. tNIGHT / DUST")
-picture(s, IMG / "lace-tnight-activity.png", Inches(0.6), Inches(1.25), Inches(3.5), Inches(5.65))
-textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(3.0), [
-    ("手順", {"bold": True, "size": 18}),
-    "1. Lace の unshielded アドレス（mn_addr_preview1…）をコピー",
-    ("2. ブラウザで公式 Faucet を開く: https://faucet.preview.midnight.network/", {"bold": True}),
-    "3. アドレスを貼り付けて請求",
-    "4. 数分後、Lace に tNIGHT が表示される（左図: 5,000 tNIGHT の着金）",
-], size=16)
-callout(s, Inches(4.6), Inches(4.6), Inches(8.1), Inches(1.6), "Faucet は「ブラウザの画面」から請求する", [
-    "Faucet API は「OK」を返しても届かないことがあった（1 時間以上待っても 0）。",
-    "ブラウザから請求した分は約 3 分で着金した。",
-])
-
-# 20. 方法A
-s = new_slide("7.2 DUST の生成 ― 方法 A: Lace の画面から", "7. tNIGHT / DUST")
-picture(s, IMG / "lace-tnight-detail.png", Inches(0.6), Inches(1.25), Inches(3.5), Inches(5.65))
-textbox(s, Inches(4.6), Inches(1.4), Inches(8.1), Inches(2.5), [
-    ("手順（公式手順: Lace 1.36.0）", {"bold": True, "size": 18}),
-    "1. トークン → 「Generate tDUST」（「DUST を生成」など）",
-    "2. 承認する",
-    "3. 数分〜十数分待つ（DUST は少しずつたまる）",
-], size=16)
-callout(s, Inches(4.6), Inches(4.0), Inches(8.1), Inches(2.2), "ボタンが見つからない場合 → 方法 B へ", [
-    "構築時の新しい Lace（ポートフォリオ画面の UI）では、トークン一覧・tNIGHT 詳細（左図）・",
-    "アカウント画面・設定のどこにも見当たらなかった。",
-    "Lace の画面に DUST が出ていなくても、デモアプリ右上で実際の残高を確認できる。",
-])
-
-# 21. 方法B
-s = new_slide("7.3 DUST の生成 ― 方法 B: 代替ツール", "7. tNIGHT / DUST")
-fl = [("ツール専用ウォレット", "tNIGHT を保有"), ("DUST 生成に登録", "受取先 = Lace の\nDUST アドレス"), ("Lace", "DUST がたまる\n→ 手数料を払える")]
-for i, (h, d) in enumerate(fl):
-    x = Inches(0.6) + i * Inches(4.15)
-    b = rect(s, x, Inches(1.35), Inches(3.6), Inches(1.3), [NAVY2, WARN_LINE, BLUE][i], shape=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.1)
-    shape_text(b, [h] + d.split("\n"), 16, WHITE, bold=True)
-    if i < 2:
-        arrow(s, x + Inches(3.67), Inches(1.8), Inches(0.42), Inches(0.4))
-code(s, Inches(0.6), Inches(2.95), Inches(6.3), Inches(1.5), [
-    "# 事前: Proof Server を起動（5.3）／ 初回のみ install",
-    ".\\dust-install.cmd",
-    "# 引数 = Lace の DUST アドレス",
-    ".\\dust-designate.cmd mn_dust_preview1...",
+    "nvm install 24 && node -v    # v24.x（22.12 以上）",
 ], size=12)
-textbox(s, Inches(7.2), Inches(2.9), Inches(5.5), Inches(3.6), [
-    ("ツールの進み方", {"bold": True, "size": 16}),
-    "1. 専用ウォレットを作成（シードを保存）",
-    "2. 同期（初回 10〜15 分）",
-    "3. tNIGHT が 0 → Faucet 請求＆着金待ち",
-    "   届かなければ、ログのアドレス宛てに",
-    "   ブラウザで Faucet 請求（送り先はツール側）",
-    "4. 登録 Tx を送信（ZK 証明 約 20 秒）",
-    "5. 数分後、アプリ右上「DUST: 再取得」",
-], size=14)
-callout(s, Inches(0.6), Inches(4.65), Inches(6.3), Inches(1.85), "同期が止まったら", [
-    "Wallet.Sync: ErrorEvent のあと進まない → Ctrl+C で止めて再実行。",
-    "シードは tools\\dust\\.demo-wallet-seed に保存済みなので、同じウォレットで続行できる。",
+code(s, Inches(0.6), Inches(4.35), Inches(6.0), Inches(1.5), [
+    "# コントラクトを変更する場合のみ",
+    "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh",
+    "compact update 0.36.0        # ★固定",
+], size=12)
+callout(s, Inches(6.9), Inches(1.35), Inches(5.9), Inches(2.1), "Compact は 0.36.0 に固定", [
+    "midnight-js 5.0.0 が受け付けるのはランタイム 0.21（0.36.0）と 0.16（0.31.1）だけ",
+    "0.33〜0.35 の出力は EraMismatchError で拒否される",
 ])
-
-# 22. Project setup
-s = new_slide("8.1〜8.2 依存パッケージのインストールとテスト", "8. アプリ")
-code(s, Inches(0.6), Inches(1.35), Inches(12.1), Inches(1.9), [
-    "# リポジトリのフォルダで",
-    ".\\npm-install.cmd      # 依存パッケージ（数分）",
-    ".\\run-tests.cmd        # 9 passed なら OK",
-], size=15)
-callout(s, Inches(0.6), Inches(3.6), Inches(12.1), Inches(1.3), "コンパイルは不要", ["コンパイル済みのコントラクト（ZK 証明鍵を含む）はリポジトリに入っている。tdeposit.compact を変更したときだけ .\\compile-contract.cmd（数分）。"], kind="ok")
-callout(s, Inches(0.6), Inches(5.15), Inches(12.1), Inches(1.3), "インストールが遅い", ["Windows 側のフォルダに WSL からアクセスするため。故障ではない。"], kind="ok")
-
-# 23. Start & connect
-s = new_slide("8.3〜8.4 起動して Lace に接続する", "8. アプリ")
-code(s, Inches(0.6), Inches(1.3), Inches(4.6), Inches(0.75), [".\\start-dev.cmd   # → http://localhost:5173"], size=14)
-picture(s, IMG / "app-start.png", Inches(0.6), Inches(2.25), Inches(6.0), Inches(3.4))
-picture(s, IMG / "app-connected.png", Inches(6.9), Inches(1.3), Inches(5.85), Inches(3.0))
-textbox(s, Inches(6.9), Inches(4.45), Inches(5.85), Inches(2.4), [
-    ("接続後、右上を確認", {"bold": True, "size": 16}),
-    "・network=preview",
-    "・DUST 残高 / 上限 / DUST アドレス（コピー可）",
-    "・DUST が 0 → 7 章へ。0 より大きければ準備完了",
-], size=14)
-textbox(s, Inches(0.6), Inches(5.8), Inches(6.0), Inches(1.2), [
-    "・Port 5173 is already in use → 既存サーバーを止めるか、そのまま使う",
-    "・設定ファイルを変えたら開発サーバーを再起動",
-], size=13, color=MUTED)
-
-# 24. Single HTML
-s = new_slide("8.5 単一 HTML 版", "8. アプリ")
-code(s, Inches(0.6), Inches(1.35), Inches(12.1), Inches(1.2), [".\\build-single.cmd   # dist-single\\tdeposit-demo.html（約 55MB）", ".\\start-single.cmd   # http://localhost:8080/tdeposit-demo.html"], size=14)
-table(s, Inches(0.6), Inches(2.85), Inches(12.1), [
-    ["開き方", "手順", "注意"],
-    ["A. HTTP で配信（推奨）", "start-single.cmd を実行し、URL を開く", "Windows の Python を使用"],
-    ["B. ファイルを直接開く", "HTML をブラウザにドラッグ＆ドロップ", "Lace の「ファイルの URL へのアクセスを許可する」を ON にする"],
-], col_w=[2.6, 4.6, 4.9], size=14, row_h=Inches(0.62))
-callout(s, Inches(0.6), Inches(5.0), Inches(12.1), Inches(1.5), "開いた URL ごとに保存領域が別", [
-    "localhost:5173 / localhost:8080 / file:// で、口座鍵とコントラクトアドレスは引き継がれない。",
-    "同じコントラクトを使うには「既存コントラクトに接続」でアドレスを入力（銀行の操作はデプロイしたときの口座鍵が必要）。",
+callout(s, Inches(6.9), Inches(3.7), Inches(5.9), Inches(1.5), "Windows の compact.exe と混同しない", [
+    "NTFS の圧縮ツールが同じ名前。Compact は必ず WSL の中で実行する",
 ])
+callout(s, Inches(6.9), Inches(5.45), Inches(5.9), Inches(1.2), "コンパイル済みの鍵がリポジトリにある", [
+    "変更しないなら Compact は不要（compile-contract.cmd も不要）",
+], kind="ok")
 
-# 25. 動作確認
-s = new_slide("9. 動作確認チェックリスト", "9. 確認")
+# 19. Proof Server
+s = new_slide("5.6 Rancher Desktop と Proof Server（必要な場合のみ）", "5. ローカル")
+callout(s, Inches(0.6), Inches(1.3), Inches(12.1), Inches(1.05), "1AM を使うなら Proof Server は不要", [
+    "11/10 のデプロイでは Proof Server に証明の依頼が届かなかった。ローカルで証明したい場合（VITE_PROOF_SERVER）だけ用意する。"], kind="ok")
+textbox(s, Inches(0.6), Inches(2.6), Inches(6.0), Inches(3.9), [
+    ("① Rancher Desktop", {"bold": True, "size": 17}),
+    "・Container Engine は dockerd (moby)、Kubernetes は不要なら OFF",
+    "・画面下部が「Running」になるまで待つ（その前は docker_engine エラー）",
+    ("② CA バンドル（初回・全員）", {"bold": True, "size": 17}),
+    "・社内 TLS 検査があると S3 からのパラメータ取得に失敗して停止する",
+    "・.\\make-ca-bundle.cmd → certs\\ca-bundle.crt",
+], size=14)
+code(s, Inches(6.9), Inches(2.6), Inches(5.9), Inches(1.3), [
+    "# ③ 起動（リポジトリのフォルダ）",
+    "docker compose -f proof-server.yml up -d",
+    "docker compose -f proof-server.yml logs -f",
+], size=13)
+textbox(s, Inches(6.9), Inches(4.05), Inches(5.9), Inches(2.6), [
+    "・listening on: 0.0.0.0:6300 で起動完了",
+    "・http://localhost:6300/version → 9.0.0",
+    "・8.0.3 のままなら古いコンテナ。up -d で入れ替える",
+    "・PC 再起動後は Running を待ってから up -d",
+], size=14)
+
+# 20. ビルド・起動
+s = new_slide("5.7 依存パッケージ・テスト・ビルド・起動", "5. ローカル")
+code(s, Inches(0.6), Inches(1.35), Inches(6.4), Inches(1.9), [
+    ".\\npm-install.cmd     # 依存パッケージ（数分）",
+    ".\\run-tests.cmd       # 9 passed",
+    ".\\build-pactora.cmd   # dist-pactora\\ にビルド",
+    ".\\start-pactora.cmd   # http://localhost:8081",
+], size=14)
+table(s, Inches(0.6), Inches(3.5), Inches(12.1), [
+    ["方法", "URL", "用途"],
+    ["start-pactora.cmd", "`http://localhost:8081/pactora-tdeposit-demo.html", "ビルドした版を手元・社内で配信"],
+    ["start-dev.cmd", "`http://localhost:5173/pactora.html", "ソースを変更しながら確認（開発サーバー）"],
+    ["GitHub Pages", "`https://101nimura.github.io/midnight_td_demo/", "main に push → Actions がビルドして公開"],
+], col_w=[2.4, 5.5, 4.2], size=13, row_h=Inches(0.6))
+callout(s, Inches(7.3), Inches(1.35), Inches(5.4), Inches(1.9), "dist-pactora はフォルダごと配信", [
+    "HTML + assets\\（JS・WASM 約 26MB）+ keys\\ zkir\\ compiler\\（ZK 鍵 約 108MB）",
+    "HTML だけコピーしても動かない",
+])
+callout(s, Inches(0.6), Inches(6.05), Inches(12.1), Inches(0.8), "URL ごとにブラウザの保存領域（口座鍵・コントラクト）は別になる（4.4）", [])
+
+# 21. 動作確認
+s = new_slide("6. 動作確認チェックリスト", "6. 確認")
 table(s, Inches(0.6), Inches(1.35), Inches(12.1), [
-    ["#", "確認項目", "期待する結果"],
-    ["1", "wsl -d Ubuntu --cd . -- bash -c \". .tools/env.sh && node -v\"", "v24.x"],
-    ["2", "wsl -d Ubuntu --cd . -- bash -c \". .tools/env.sh && compact compile --version\"", "0.31.1"],
-    ["3", "docker info", "エラーが出ない"],
-    ["4", "http://localhost:6300/version", "8.0.3"],
-    ["5", "run-tests.cmd", "9 passed"],
-    ["6", "デモアプリで「Lace に接続」", "network=preview、DUST > 0"],
-    ["7", "「新規デプロイ」", "数分後に「デプロイ完了: 0200…」"],
-], col_w=[0.6, 6.5, 5.0], size=15, row_h=Inches(0.58))
-callout(s, Inches(0.6), Inches(6.2), Inches(12.1), Inches(0.65), "すべて OK なら README「6. デモシナリオ」へ", [], kind="ok")
+    ["#", "コース", "確認項目", "期待する結果"],
+    ["1", "A・B", "1.3 の Preview の確認", "height が返る（前回より小さければリセット済み）"],
+    ["2", "A・B", "1AM の右上", "PREVIEW ● SYNCED"],
+    ["3", "A・B", "1AM の DUST", "0 より大きい"],
+    ["4", "A・B", "デモの S-2", "ウォレットが接続済み、DUST が OK"],
+    ["5", "A・B", "デモのステップ 1（デプロイ）", "「提供を開始しました」、状態が稼働中"],
+    ["6", "B", "run-tests.cmd", "9 passed"],
+    ["7", "B", "build-pactora.cmd → start-pactora.cmd", "localhost:8081 に S-1 が表示される"],
+    ["8", "B（使う場合）", "http://localhost:6300/version", "9.0.0"],
+], col_w=[0.5, 1.6, 4.6, 5.4], size=14, row_h=Inches(0.56))
+callout(s, Inches(0.6), Inches(6.5), Inches(12.1), Inches(0.5), "すべて OK なら README「3.3 Pactora UI 版」のガイドへ", [], kind="ok", size=12)
 
-# 26-27. Troubleshooting
-trouble = [
+# 22-24. トラブルシューティング
+t1 = [
     ["症状", "原因", "対処"],
-    ["C:/Program Files/Git/mnt/c/... No such file", "Git Bash のパス変換", "PowerShell で実行 / MSYS_NO_PATHCONV=1"],
+    ["見つかりません。file:// で開いています", "file:// ではウォレットが組み込まれない（#33）", "GitHub Pages か localhost:8081 で開く"],
+    ["見つかりません。window.midnight がありません", "拡張が無効 / サイトへのアクセス制限", "「すべてのサイト」にして再読み込み"],
+    ["Lace で balanceUnsealedTransaction … Internal Server Error", "Lace の接続先（Blockfrost）が古いチェーン（#36）", "1AM を使う"],
+    ["Lace にリセット前の残高が出る / Faucet の分が出ない", "同上。再同期しても直らない", "1AM を使う"],
+    ["No account is connected for this dApp", "設定変更・ロックなどで接続が切れた", "もう一度操作 / 再読み込み"],
+    ["以前のコントラクトが表示される・操作できない", "Preview がリセットされた（#35）", "初期化 →「新しいコントラクトで最初から」"],
+]
+t2 = [
+    ["症状", "原因", "対処"],
+    ["DUST がずっと 0", "未登録 / 登録直後", "3.2 の GENERATE DUST → 数分待つ"],
+    ["dust-designate.cmd が使えない", "ledger 8 用のツール（#38）", "1AM の画面で DUST を生成"],
+    ["Faucet が成功なのに着金しない", "アドレス違い / 同期前", "unshielded アドレスか確認、SYNCED を待つ"],
+    ["「デモの起動に失敗しました」", "読み込み失敗 / 古いキャッシュ", "Ctrl+Shift+R、F12 で確認"],
+    ["表示が古い（8.0.3 と出る など）", "キャッシュ / Pages の更新待ち", "数分待って Ctrl+Shift+R"],
+    [".\\xxx.cmd: command not found", "WSL の bash で .cmd を実行", "PowerShell かエクスプローラーから"],
+]
+t3 = [
+    ["症状", "原因", "対処"],
+    ["C:/Program Files/Git/mnt/c/... No such file", "Git Bash のパス変換", "PowerShell / MSYS_NO_PATHCONV=1"],
+    ["EraMismatchError / checkRuntimeVersion", "Compact のバージョン違い", "compact update 0.36.0 → 再コンパイル"],
     ["compact で圧縮ツールのような出力", "Windows の compact.exe", "WSL の中で実行"],
-    ["checkRuntimeVersion エラー", "Compact のバージョン違い", "compact update 0.31.1 → 再コンパイル"],
     ["//./pipe/docker_engine エラー", "Rancher Desktop 起動中", "Running まで待つ"],
     ["Proof Server がすぐ止まる", "社内 TLS 検査", "make-ca-bundle.cmd → 再起動"],
-    ["Lace ウォレットが見つかりません", "拡張無効 / file:// の許可 OFF", "有効化 / 許可 ON / http で開く"],
-    ["$'\\r': command not found", "古い状態でクローン（改行 CRLF）", "git pull → git rm --cached -r . → git reset --hard"],
+    ["localhost:6300/version が 8.0.3", "古いコンテナ", "docker compose … up -d で 9.0.0 に"],
 ]
-trouble2 = [
-    ["症状", "原因", "対処"],
-    ["Generate tDUST が見つからない", "Lace の版による UI の違い", "7.3 の代替ツール"],
-    ["DUST がずっと 0", "未登録 / 登録直後", "7.2・7.3、数分〜十数分待つ"],
-    ["Faucet が OK なのに着金しない", "Faucet API の不具合", "ブラウザの Faucet 画面から請求"],
-    ["DUST ツールの同期が止まる", "一時的な WebSocket エラー", "Ctrl+C → 再実行"],
-    ["コードを変えても画面が変わらない", "変更を検知していない", "開発サーバーを再起動"],
-    ["Port 5173 is already in use", "サーバーが二重起動", "既存を止める / そのまま使う"],
-]
-for i, rows in enumerate([trouble, trouble2]):
-    s = new_slide(f"10. トラブルシューティング（{i + 1}/2）", "10. トラブル")
-    table(s, Inches(0.6), Inches(1.35), Inches(12.1), rows, col_w=[4.3, 3.4, 4.4], size=14, row_h=Inches(0.66))
+for i, (rows, sub) in enumerate([(t1, "ウォレット・ネットワーク"), (t2, "DUST・デモ"), (t3, "ビルド・Proof Server")]):
+    s = new_slide(f"7. トラブルシューティング（{i + 1}/3）{sub}", "7. トラブル")
+    table(s, Inches(0.6), Inches(1.35), Inches(12.1), rows, col_w=[4.6, 3.8, 3.7], size=13, row_h=Inches(0.72))
 
-# 28. 付録
-s = new_slide("付録. バージョンと接続先", "付録")
+# 25. 付録: Lace について
+s = new_slide("付録. Lace について（2026-11-10 時点）", "付録")
+two_col_pic(s, [
+    "・Lace の Midnight 設定では、ノード RPC・インデクサーが Blockfrost に固定され、利用者は変更できない",
+    "・Preview の再起動後も、Blockfrost のノードは古いチェーン（ブロック高 約 163 万）で止まり、インデクサーは 500 を返した",
+    "・そのため Lace では、残高が古いまま・Faucet の分が見えない・デプロイが Internal Server Error になる",
+    "・デモはウォレットの共通 API（DApp Connector）で接続するので、Lace の接続先が直れば Lace でも動く見込み",
+    ("課題: ISSUES.md #34〜#36、TOKENIZED_DEPOSIT_ISSUES.md M2・M3", {"size": 13, "color": MUTED}),
+], "lace-midnight-settings-blockfrost.png", size=14, left_w=6.0)
+
+# 26. 付録: バージョンと接続先
+s = new_slide("付録. バージョンと接続先（2026-11-10 に動作確認）", "付録")
 table(s, Inches(0.6), Inches(1.35), Inches(5.9), [
     ["コンポーネント", "バージョン"],
-    ["Compact コンパイラ", "0.31.1"],
-    ["compact-runtime", "0.16.0"],
-    ["midnight-js", "4.1.1"],
-    ["dapp-connector-api", "4.0.1"],
-    ["wallet-sdk（DUST ツール）", "1.2.0"],
-    ["Proof Server", "8.0.3"],
-    ["Node.js（WSL）", "24.x"],
-    ["Vite", "8.x"],
-], col_w=[3.4, 2.5], size=14, row_h=Inches(0.52))
+    ["Preview", "ledger 9（11/7 再起動）"],
+    ["ウォレット", "1AM（DApp Connector v4）"],
+    ["Compact コンパイラ", "0.36.0"],
+    ["compact-runtime", "0.21.0"],
+    ["midnight-js", "5.0.0"],
+    ["dapp-connector-api", "4.1.0"],
+    ["ledger-v9", "1.0.0"],
+    ["Proof Server", "9.0.0（必要な場合のみ）"],
+    ["Node.js（WSL）", "24.x（22.12 以上）"],
+], col_w=[2.7, 3.2], size=13, row_h=Inches(0.5))
 table(s, Inches(6.8), Inches(1.35), Inches(5.9), [
     ["用途", "URL"],
     ["Indexer", "`https://indexer.preview.midnight.network/api/v4/graphql"],
     ["Node（RPC）", "`https://rpc.preview.midnight.network"],
     ["公式 Faucet", "`https://faucet.preview.midnight.network/"],
-    ["Faucet API（ツール用）", "`https://midnight-tmnight-preview.nethermind.dev/"],
+    ["デモ", "`https://101nimura.github.io/midnight_td_demo/"],
     ["リポジトリ", "`https://github.com/101nimura/midnight_td_demo"],
-    ["Proof Server", "`http://localhost:6300"],
-], col_w=[1.6, 4.3], size=12, row_h=Inches(0.55))
-callout(s, Inches(6.8), Inches(5.45), Inches(5.9), Inches(1.2), "デモアプリの接続先", ["Lace の設定（getConfiguration）から受け取る。Lace 側の設定が優先される。"], kind="ok")
+    ["公式ドキュメント", "`https://docs.midnight.network/guides/networks-and-environments"],
+], col_w=[1.6, 4.3], size=11, row_h=Inches(0.55))
+callout(s, Inches(6.8), Inches(5.4), Inches(5.9), Inches(1.3), "初版（11/2・ledger 8）の組み合わせは使えない", [
+    "Compact 0.31.1 / midnight-js 4.1.1 / Proof Server 8.0.3 / Lace"])
 
 prs.save(OUT)
 print(f"saved {OUT} ({page['n']} slides)")

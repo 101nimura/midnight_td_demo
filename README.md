@@ -16,7 +16,7 @@ Midnight ブロックチェーン上で、銀行が発行する **トークン�
 
 関連ドキュメント
 
-- 環境を一から作る手順: [`docs/SETUP.md`](docs/SETUP.md)（スライド版: `docs/SETUP.pptx`）※2026-11-02 時点（ledger 8）の手順。バージョンは上の表を優先
+- 環境を一から作る手順: [`docs/SETUP.md`](docs/SETUP.md)（スライド版: `docs/SETUP.pptx`）※2026-11-10 改訂（ledger 9・1AM・Pactora デモ）。デモを動かすだけならコース A（1AM + tNIGHT + DUST）
 - Midnight でトークン化預金を実現する際の課題（重要度別の整理版）: [`docs/TOKENIZED_DEPOSIT_ISSUES.md`](docs/TOKENIZED_DEPOSIT_ISSUES.md)
 - デモ作成中に発生した問題・課題の記録（時系列）: [`docs/ISSUES.md`](docs/ISSUES.md)
 
