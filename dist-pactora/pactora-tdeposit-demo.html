@@ -59850,6 +59850,7 @@ A.walletDlg = () => {
 		["ウォレット", `${esc(s.name)} ／ ${esc(s.networkId)}`],
 		["アドレス", `<span class="mono" style="word-break:break-all">${esc(s.unshieldedAddress)}</span>`],
 		["DUST", `${s.dustBalance === void 0 ? "不明" : num(s.dustBalance)}${s.dustCap !== void 0 ? ` ／ 上限 ${num(s.dustCap)}` : ""}`],
+		["DUST アドレス", s.dustAddress ? `<span class="mono" style="word-break:break-all">${esc(s.dustAddress)}</span> <button class="link" data-act="copy" data-a="${esc(s.dustAddress)}">コピー</button><div class="xs">dust-designate.cmd に渡すアドレスです</div>` : "取得できません"],
 		["証明", esc(s.proofMode)]
 	]) : "<div class=\"box box-warn\">Lace に接続されていません</div>"}
     <div class="xs" style="font-weight:700;color:var(--navy);margin:14px 0 6px">2. ${who(id)} の口座鍵</div>
