@@ -1,0 +1,36 @@
+// 検証用の試し書き: ノートの中身を、発行体の公開鍵で「正しく暗号化した」ことを回路で証明できるか
+//   ECDH（Jubjub）で共有鍵を作り、共有鍵のハッシュでノートの値をマスクして公開する
+pragma language_version >= 0.28;
+import CompactStandardLibrary;
+
+export ledger issuerPk: JubjubPoint;          // 発行体の暗号化用公開鍵（= 秘密スカラー × G）
+export ledger escrowR: Map<Uint<64>, JubjubPoint>;  // 一時公開鍵 R = e × G
+export ledger escrowC: Map<Uint<64>, Field>;        // 暗号文 c = value + H(e × issuerPk)
+export ledger n: Counter;
+
+witness ephemeral(): JubjubScalar;
+
+constructor(pk: JubjubPoint) {
+  issuerPk = disclose(pk);
+}
+
+export circuit escrow(value: Uint<64>): [] {
+  const e = ephemeral();
+  const R = ecMulGenerator(e);
+  const S = ecMul(issuerPk, e);
+  const k = transientHash<[Field, Field]>([jubjubPointX(S), jubjubPointY(S)]);
+  const c = (value as Field) + k;
+  const i = n.read();
+  escrowR.insert(i, disclose(R));
+  escrowC.insert(i, disclose(c));
+  n.increment(1);
+}
+
+// 発行体側の復号（オフチェーンで使う）: value = c − H(s × R)
+export pure circuit pubKeyOf(s: JubjubScalar): JubjubPoint {
+  return ecMulGenerator(s);
+}
+export pure circuit decrypt(s: JubjubScalar, R: JubjubPoint, c: Field): Field {
+  const S = ecMul(R, s);
+  return c - transientHash<[Field, Field]>([jubjubPointX(S), jubjubPointY(S)]);
+}

@@ -1,0 +1,149 @@
+// =====================================================================
+//  C1 検証用（PoC）: 残高を秘匿しつつ、発行体が凍結・強制移転・強制償還できるか
+// ---------------------------------------------------------------------
+//  ・残高は「ノート」（所有者・金額・乱数のコミットメント）で持ち、HistoricMerkleTree に入れる
+//    → 公開されるのはコミットメント（ハッシュ）だけ。金額・所有者は公開されない
+//  ・ノートの使用は「ナリファイア」（乱数から作る一意の値）を Set に入れて二重使用を防ぐ
+//    → どのノートを使ったかは公開されない（Merkle 木の所属証明）
+//  ・KYC 済み口座は「口座ID の Merkle 木」に入れ、送金元・送金先がその一員であることを証明する
+//    → どの口座かは公開されない。凍結 = 木から外す（insertIndexDefault）+ 過去の根を無効化（resetHistory）
+//  ・発行体は、ノートの中身（所有者・金額・乱数）を知っていれば、所有者の鍵なしに
+//    同じナリファイアでノートを使える（強制移転・強制償還）
+//    → 中身を発行体が知る方法は、PoC ではオフチェーンでの共有を前提にする（暗号化して公開する方式は別途）
+// =====================================================================
+pragma language_version >= 0.28;
+
+import CompactStandardLibrary;
+
+// ノートの中身（オフチェーンで所有者・発行体が保持する）
+export struct Note {
+  owner: Bytes<32>;   // 所有者の口座ID
+  value: Uint<64>;    // 金額
+  rand: Bytes<32>;    // 乱数（コミットメントの乱数・ナリファイアの元）
+}
+
+// ---------------- 公開レジャー ----------------
+export ledger issuer: Bytes<32>;                          // 発行体の口座ID
+export ledger members: HistoricMerkleTree<10, Bytes<32>>; // KYC 済み・凍結されていない口座ID
+export ledger notes: HistoricMerkleTree<10, Bytes<32>>;   // ノートのコミットメント
+export ledger nullifiers: Set<Bytes<32>>;                 // 使用済みノートのナリファイア
+export ledger totalSupply: Uint<64>;                      // 発行残高（公開）
+
+// ---------------- 秘密入力（ウィットネス） ----------------
+witness localSecretKey(): Bytes<32>;
+witness memberPath(id: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness notePath(cm: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+constructor() {
+  issuer = disclose(accountId(localSecretKey()));
+  totalSupply = 0;
+}
+
+// ---------------- 純粋関数 ----------------
+export pure circuit accountId(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "tdp:acct:"), sk]);
+}
+
+export pure circuit noteCommitment(n: Note): Bytes<32> {
+  return persistentCommit<[Bytes<32>, Uint<64>]>([n.owner, n.value], n.rand);
+}
+
+export pure circuit nullifierOf(n: Note): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "tdp:nul:"), n.rand]);
+}
+
+// ---------------- 内部ヘルパー ----------------
+circuit assertIssuer(): [] {
+  assert(disclose(accountId(localSecretKey())) == issuer, "発行体（銀行）のみ実行できます");
+}
+
+// 口座が KYC 済み・凍結されていないこと（どの口座かは公開しない）
+circuit assertMember(id: Bytes<32>): [] {
+  const p = memberPath(id);
+  assert(p.leaf == id, "口座の証明が一致しません");
+  assert(members.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(p))), "未登録または凍結中の口座です");
+}
+
+// ノートが存在し未使用であることを証明して使用済みにする（どのノートかは公開しない）
+circuit spend(n: Note): [] {
+  const cm = noteCommitment(n);
+  const p = notePath(cm);
+  assert(p.leaf == cm, "ノートの証明が一致しません");
+  assert(notes.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(p))), "存在しないノートです");
+  const nul = disclose(nullifierOf(n));
+  assert(!nullifiers.member(nul), "使用済みのノートです");
+  nullifiers.insert(nul);
+}
+
+circuit output(n: Note): [] {
+  notes.insert(disclose(noteCommitment(n)));
+}
+
+// =====================================================================
+//  発行体（銀行）
+// =====================================================================
+
+// 口座登録（KYC 完了）。index は銀行が管理する口座の位置（公開される）
+export circuit registerAccount(id: Bytes<32>, index: Uint<64>): [] {
+  assertIssuer();
+  members.insertIndex(disclose(id), disclose(index));
+}
+
+// 口座凍結: 口座ID を木から外し、過去の根を無効にする（以後、その口座は送金・償還の証明が作れない）
+export circuit freezeAccount(index: Uint<64>): [] {
+  assertIssuer();
+  members.insertIndexDefault(disclose(index));
+  members.resetHistory();
+}
+
+// 発行: 発行額は公開（発行残高の管理のため）、発行先は公開しない
+export circuit issue(n: Note): [] {
+  assertIssuer();
+  assertMember(n.owner);
+  output(n);
+  totalSupply = (totalSupply + disclose(n.value)) as Uint<64>;
+}
+
+// 強制移転: 所有者の鍵なしで、ノートを別の口座へ移す（凍結中の口座のノートも対象）
+export circuit forceTransfer(input: Note, to: Note, change: Note): [] {
+  assertIssuer();
+  spend(input);
+  assertMember(to.owner);
+  assert(change.owner == input.owner, "おつりは元の所有者に戻します");
+  assert(to.value + change.value == input.value, "金額が一致しません");
+  output(to);
+  output(change);
+}
+
+// 強制償還: 所有者の鍵なしで、ノートを消却する
+export circuit forceRedeem(input: Note): [] {
+  assertIssuer();
+  spend(input);
+  totalSupply = (totalSupply - disclose(input.value)) as Uint<64>;
+}
+
+// =====================================================================
+//  利用者
+// =====================================================================
+
+// 送金: 金額・送金元・送金先は公開されない（公開されるのはナリファイアと新しいコミットメント）
+export circuit transfer(input: Note, to: Note, change: Note): [] {
+  const me = accountId(localSecretKey());
+  assert(input.owner == me, "自分のノートではありません");
+  assertMember(me);
+  assertMember(to.owner);
+  spend(input);
+  assert(change.owner == me, "おつりは自分に戻します");
+  assert(to.value + change.value == input.value, "金額が一致しません");
+  output(to);
+  output(change);
+}
+
+// 償還: 償還額は公開（発行残高の管理のため）、誰が償還したかは公開しない
+export circuit redeem(input: Note): [] {
+  const me = accountId(localSecretKey());
+  assert(input.owner == me, "自分のノートではありません");
+  assertMember(me);
+  spend(input);
+  totalSupply = (totalSupply - disclose(input.value)) as Uint<64>;
+}

@@ -1,0 +1,126 @@
+{
+  "compiler-version": "0.36.0",
+  "compiler-commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469",
+  "language-version": "0.28.0",
+  "runtime-version": "0.21.0",
+  "circuits": [
+    {
+      "name": "escrow",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "value",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "pubKeyOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "s",
+          "type": {
+            "type-name": "JubjubScalar"
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "JubjubPoint"
+      }
+    },
+    {
+      "name": "decrypt",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "s",
+          "type": {
+            "type-name": "JubjubScalar"
+          }
+        },
+        {
+          "name": "R",
+          "type": {
+            "type-name": "JubjubPoint"
+          }
+        },
+        {
+          "name": "c",
+          "type": {
+            "type-name": "Field"
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Field"
+      }
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "ephemeral",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "JubjubScalar"
+      }
+    }
+  ],
+  "contracts": [
+  ],
+  "ledger": [
+    {
+      "name": "issuerPk",
+      "index": 0,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "JubjubPoint"
+      }
+    },
+    {
+      "name": "escrowR",
+      "index": 1,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      },
+      "value": {
+        "type-name": "JubjubPoint"
+      }
+    },
+    {
+      "name": "escrowC",
+      "index": 2,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      },
+      "value": {
+        "type-name": "Field"
+      }
+    },
+    {
+      "name": "n",
+      "index": 3,
+      "exported": true,
+      "storage": "Counter"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "manifest-version": "1",
+  "compiler-version": "0.36.0",
+  "compiler-commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469",
+  "language-version": "0.28.0",
+  "runtime-version": "0.21.0",
+  "compiler": {
+    "type": "directory",
+    "contract-info.json": {
+      "type": "file",
+      "size": 15077,
+      "hash": "dcadfc9973a696ea76e89585094440d67e85eff3e701b8ebaac8f4f66f58d831"
+    }
+  },
+  "contract": {
+    "type": "directory",
+    "index.d.ts": {
+      "type": "file",
+      "size": 6630,
+      "hash": "011102a16df1cc6002238b0783d35d1b393def84884e67fc301f5fdaf43c2110"
+    },
+    "index.js": {
+      "type": "file",
+      "size": 122241,
+      "hash": "f31850cab1cbb35634ea94e13567ee2091b5aabf51e67560b38acefa54dd5239"
+    },
+    "index.js.map": {
+      "type": "file",
+      "size": 4805,
+      "hash": "33c2df07f11ba835805c4c07229708468e8077bb1c5960c953b167a67b1cb8aa"
+    }
+  },
+  "zkir": {
+    "type": "directory",
+    "forceRedeem.zkir": {
+      "type": "file",
+      "size": 11972,
+      "hash": "0285385f0a3d5531a5d3b52ae7dd1e01833b95a851d2e0095fd4ce1e0a535b81"
+    },
+    "forceTransfer.zkir": {
+      "type": "file",
+      "size": 24078,
+      "hash": "b496d1f8f855de5861fc9785d2bc2d7ee178b4cee6ab1a88208c2f626f80a2b6"
+    },
+    "freezeAccount.zkir": {
+      "type": "file",
+      "size": 4262,
+      "hash": "0c0dcd46c88f5f71e7b0de390f33833fe2207cc6c337d7b70f59550963396c24"
+    },
+    "issue.zkir": {
+      "type": "file",
+      "size": 11970,
+      "hash": "0a17926cd5030c52db6c6e60756193eebc8e4b655e1936e11100b60ac033c12b"
+    },
+    "redeem.zkir": {
+      "type": "file",
+      "size": 18829,
+      "hash": "d4b65d1f116769cb4eba537721fc557982054889c7df40a3252339fac6de3f98"
+    },
+    "registerAccount.zkir": {
+      "type": "file",
+      "size": 3912,
+      "hash": "866043c5b6a4aab9a6682db230bf49897283e5f27aabc4d3a7e7584db010de9e"
+    },
+    "transfer.zkir": {
+      "type": "file",
+      "size": 30974,
+      "hash": "bf3d86c6b2f1242a07da3fcc373871e3d3557143ac1c3b99647d606a6472eced"
+    }
+  }
+}
