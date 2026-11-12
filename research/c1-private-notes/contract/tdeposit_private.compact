@@ -3,39 +3,61 @@
 // ---------------------------------------------------------------------
 //  ・残高は「ノート」（所有者・金額・乱数のコミットメント）で持ち、HistoricMerkleTree に入れる
 //    → 公開されるのはコミットメント（ハッシュ）だけ。金額・所有者は公開されない
-//  ・ノートの使用は「ナリファイア」（乱数から作る一意の値）を Set に入れて二重使用を防ぐ
+//  ・ノートの使用は「ナリファイア」（乱数とコミットメントから作る一意の値）を Set に入れて二重使用を防ぐ
 //    → どのノートを使ったかは公開されない（Merkle 木の所属証明）
-//  ・KYC 済み口座は「口座ID の Merkle 木」に入れ、送金元・送金先がその一員であることを証明する
-//    → どの口座かは公開されない。凍結 = 木から外す（insertIndexDefault）+ 過去の根を無効化（resetHistory）
-//  ・発行体は、ノートの中身（所有者・金額・乱数）を知っていれば、所有者の鍵なしに
-//    同じナリファイアでノートを使える（強制移転・強制償還）
-//    → 中身を発行体が知る方法は、PoC ではオフチェーンでの共有を前提にする（暗号化して公開する方式は別途）
+//  ・KYC 済み口座は「口座の葉」（口座ID・暗号化用公開鍵・乱数のコミットメント）を Merkle 木に入れる
+//    → どの口座かは公開されない。口座ID を知っていても、登録済みかどうかは葉から確かめられない
+//    → 凍結 = 葉を木から外す（insertIndexDefault）+ 過去の根を無効化（resetHistory）
+//  ・新しいノートの中身は、所有者（受取人）と銀行の公開鍵で暗号化して公開する（ECDH + ハッシュのマスク）
+//    → 「正しく暗号化した」ことを回路で証明する。受取人の公開鍵は口座の葉に含まれ、すり替えられない
+//    → 受取人はオフチェーンでの共有なしにノートを受け取れる。銀行は全ノートを復号できる
+//  ・発行体は、復号したノートの中身を使って、所有者の鍵なしに同じナリファイアでノートを使える
+//    （強制移転・強制償還）
 // =====================================================================
 pragma language_version >= 0.28;
 
 import CompactStandardLibrary;
 
-// ノートの中身（オフチェーンで所有者・発行体が保持する）
+// ノートの中身（所有者・銀行は、公開された暗号文から復号して得る）
 export struct Note {
   owner: Bytes<32>;   // 所有者の口座ID
   value: Uint<64>;    // 金額
-  rand: Bytes<32>;    // 乱数（コミットメントの乱数・ナリファイアの元）
+  rand: Field;        // 乱数（コミットメントの乱数・ナリファイアの元）。暗号化できるよう Field にする
+}
+
+// 口座（口座の葉の中身）。送金先の「受取用アドレス」として、口座の持ち主が送金元に渡す
+export struct Member {
+  id: Bytes<32>;      // 口座ID
+  encPk: JubjubPoint; // 暗号化用公開鍵（受取ノートの暗号化に使う）
+  salt: Bytes<32>;    // 葉の乱数（口座ID から葉を推測されないようにする）
+}
+
+// 新しいノート 1 つ分の暗号文（公開される）
+//   c[0] = ownerTag + k0, c[1] = value + k1, c[2] = rand + k2,  k_i = H(S.x, S.y, i),  S = e × 公開鍵
+export struct NoteCipher {
+  epk: JubjubPoint;          // 一時公開鍵 R = e × G（所有者宛て・銀行宛てで共通）
+  toOwner: Vector<3, Field>; // 所有者宛て
+  toBank: Vector<3, Field>;  // 銀行宛て
 }
 
 // ---------------- 公開レジャー ----------------
 export ledger issuer: Bytes<32>;                          // 発行体の口座ID
-export ledger members: HistoricMerkleTree<10, Bytes<32>>; // KYC 済み・凍結されていない口座ID
+export ledger bankEncPk: JubjubPoint;                     // 銀行の暗号化用公開鍵
+export ledger members: HistoricMerkleTree<10, Bytes<32>>; // KYC 済み・凍結されていない口座の葉
 export ledger notes: HistoricMerkleTree<10, Bytes<32>>;   // ノートのコミットメント
+export ledger ciphers: Map<Bytes<32>, NoteCipher>;        // ノートのコミットメント → 暗号文
 export ledger nullifiers: Set<Bytes<32>>;                 // 使用済みノートのナリファイア
 export ledger totalSupply: Uint<64>;                      // 発行残高（公開）
 
 // ---------------- 秘密入力（ウィットネス） ----------------
 witness localSecretKey(): Bytes<32>;
-witness memberPath(id: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness memberPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 witness notePath(cm: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness ephemeralKey(): JubjubScalar;                     // 暗号化の一時秘密鍵（呼ぶたびに新しい乱数）
 
-constructor() {
+constructor(bankPk: JubjubPoint) {
   issuer = disclose(accountId(localSecretKey()));
+  bankEncPk = disclose(bankPk);
   totalSupply = 0;
 }
 
@@ -44,12 +66,50 @@ export pure circuit accountId(sk: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([pad(32, "tdp:acct:"), sk]);
 }
 
-export pure circuit noteCommitment(n: Note): Bytes<32> {
-  return persistentCommit<[Bytes<32>, Uint<64>]>([n.owner, n.value], n.rand);
+export pure circuit memberLeaf(m: Member): Bytes<32> {
+  // JubjubPoint をそのままコミットすると、ZK 鍵の生成（zkir）で失敗するため、座標の Field に分けて入れる
+  return persistentCommit<[Bytes<32>, Field, Field]>([m.id, jubjubPointX(m.encPk), jubjubPointY(m.encPk)], m.salt);
 }
 
+export pure circuit noteCommitment(n: Note): Bytes<32> {
+  return persistentCommit<[Bytes<32>, Uint<64>]>([n.owner, n.value], n.rand as Bytes<32>);
+}
+
+// ナリファイア: 乱数（所有者と銀行だけが知る）とコミットメントから作る
+//   ・乱数を含むので、第三者はコミットメントと結び付けられない（どのノートを使ったか分からない）
+//   ・コミットメントを含むので、乱数を使い回した別のノートと同じ値にならない
+//     （送金元が「使用済みと同じナリファイアになるノート」を送り付けて、受取人を害することを防ぐ）
 export pure circuit nullifierOf(n: Note): Bytes<32> {
-  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "tdp:nul:"), n.rand]);
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "tdp:nul:"), n.rand as Bytes<32>, noteCommitment(n)]);
+}
+
+// 暗号文に入れる所有者の印（口座ID は Field に収まらないので、Field に縮約した値を入れる）
+export pure circuit ownerTag(id: Bytes<32>): Field {
+  return degradeToTransient(id);
+}
+
+export pure circuit encPkOf(s: JubjubScalar): JubjubPoint {
+  return ecMulGenerator(s);
+}
+
+// 共有点 S から 3 つのマスクを作り、平文に足す（復号では引く）
+pure circuit keystream(S: JubjubPoint): Vector<3, Field> {
+  const x = jubjubPointX(S);
+  const y = jubjubPointY(S);
+  return [transientHash<Vector<3, Field>>([x, y, 0 as Field]),
+          transientHash<Vector<3, Field>>([x, y, 1 as Field]),
+          transientHash<Vector<3, Field>>([x, y, 2 as Field])];
+}
+
+pure circuit encryptTo(pk: JubjubPoint, e: JubjubScalar, n: Note): Vector<3, Field> {
+  const k = keystream(ecMul(pk, e));
+  return [ownerTag(n.owner) + k[0], (n.value as Field) + k[1], n.rand + k[2]];
+}
+
+// 復号（オフチェーンで使う）: 平文 = 暗号文 − H(s × R, i)。結果は [ownerTag, value, rand]
+export pure circuit decrypt(s: JubjubScalar, epk: JubjubPoint, c: Vector<3, Field>): Vector<3, Field> {
+  const k = keystream(ecMul(epk, s));
+  return [c[0] - k[0], c[1] - k[1], c[2] - k[2]];
 }
 
 // ---------------- 内部ヘルパー ----------------
@@ -58,9 +118,10 @@ circuit assertIssuer(): [] {
 }
 
 // 口座が KYC 済み・凍結されていないこと（どの口座かは公開しない）
-circuit assertMember(id: Bytes<32>): [] {
-  const p = memberPath(id);
-  assert(p.leaf == id, "口座の証明が一致しません");
+circuit assertMember(m: Member): [] {
+  const leaf = memberLeaf(m);
+  const p = memberPath(leaf);
+  assert(p.leaf == leaf, "口座の証明が一致しません");
   assert(members.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(p))), "未登録または凍結中の口座です");
 }
 
@@ -75,21 +136,32 @@ circuit spend(n: Note): [] {
   nullifiers.insert(nul);
 }
 
-circuit output(n: Note): [] {
-  notes.insert(disclose(noteCommitment(n)));
+// 新しいノートを作り、中身を所有者（ownerPk）と銀行に暗号化して公開する
+circuit output(n: Note, ownerPk: JubjubPoint): [] {
+  const cm = disclose(noteCommitment(n));
+  assert(!ciphers.member(cm), "同じノートがすでにあります");
+  const e = ephemeralKey();
+  // 暗号文は公開することが目的なので disclose する（中身は所有者と銀行だけが復号できる）
+  const c = disclose(NoteCipher {
+    epk: ecMulGenerator(e),
+    toOwner: encryptTo(ownerPk, e, n),
+    toBank: encryptTo(bankEncPk, e, n)
+  });
+  notes.insert(cm);
+  ciphers.insert(cm, c);
 }
 
 // =====================================================================
 //  発行体（銀行）
 // =====================================================================
 
-// 口座登録（KYC 完了）。index は銀行が管理する口座の位置（公開される）
-export circuit registerAccount(id: Bytes<32>, index: Uint<64>): [] {
+// 口座登録（KYC 完了）。公開されるのは口座の葉（コミットメント）と、銀行が管理する位置 index
+export circuit registerAccount(leaf: Bytes<32>, index: Uint<64>): [] {
   assertIssuer();
-  members.insertIndex(disclose(id), disclose(index));
+  members.insertIndex(disclose(leaf), disclose(index));
 }
 
-// 口座凍結: 口座ID を木から外し、過去の根を無効にする（以後、その口座は送金・償還の証明が作れない）
+// 口座凍結: 口座の葉を木から外し、過去の根を無効にする（以後、その口座は送金・償還の証明が作れない）
 export circuit freezeAccount(index: Uint<64>): [] {
   assertIssuer();
   members.insertIndexDefault(disclose(index));
@@ -97,22 +169,25 @@ export circuit freezeAccount(index: Uint<64>): [] {
 }
 
 // 発行: 発行額は公開（発行残高の管理のため）、発行先は公開しない
-export circuit issue(n: Note): [] {
+export circuit issue(n: Note, m: Member): [] {
   assertIssuer();
-  assertMember(n.owner);
-  output(n);
+  assert(n.owner == m.id, "発行先の口座が一致しません");
+  assertMember(m);
+  output(n, m.encPk);
   totalSupply = (totalSupply + disclose(n.value)) as Uint<64>;
 }
 
 // 強制移転: 所有者の鍵なしで、ノートを別の口座へ移す（凍結中の口座のノートも対象）
-export circuit forceTransfer(input: Note, to: Note, change: Note): [] {
+//   おつりの暗号化先 changePk は、元の所有者が凍結中でも使えるよう、銀行の記録から渡す
+export circuit forceTransfer(input: Note, to: Note, toMember: Member, change: Note, changePk: JubjubPoint): [] {
   assertIssuer();
   spend(input);
-  assertMember(to.owner);
+  assert(to.owner == toMember.id, "送金先の口座が一致しません");
+  assertMember(toMember);
   assert(change.owner == input.owner, "おつりは元の所有者に戻します");
   assert(to.value + change.value == input.value, "金額が一致しません");
-  output(to);
-  output(change);
+  output(to, toMember.encPk);
+  output(change, changePk);
 }
 
 // 強制償還: 所有者の鍵なしで、ノートを消却する
@@ -126,23 +201,25 @@ export circuit forceRedeem(input: Note): [] {
 //  利用者
 // =====================================================================
 
-// 送金: 金額・送金元・送金先は公開されない（公開されるのはナリファイアと新しいコミットメント）
-export circuit transfer(input: Note, to: Note, change: Note): [] {
-  const me = accountId(localSecretKey());
-  assert(input.owner == me, "自分のノートではありません");
+// 送金: 金額・送金元・送金先は公開されない（公開されるのはナリファイア・新しいコミットメント・暗号文）
+//   me は自分の口座、toMember は送金先から受け取った受取用アドレス
+export circuit transfer(input: Note, me: Member, to: Note, toMember: Member, change: Note): [] {
+  assert(me.id == accountId(localSecretKey()), "自分の口座ではありません");
+  assert(input.owner == me.id, "自分のノートではありません");
   assertMember(me);
-  assertMember(to.owner);
+  assert(to.owner == toMember.id, "送金先の口座が一致しません");
+  assertMember(toMember);
   spend(input);
-  assert(change.owner == me, "おつりは自分に戻します");
+  assert(change.owner == me.id, "おつりは自分に戻します");
   assert(to.value + change.value == input.value, "金額が一致しません");
-  output(to);
-  output(change);
+  output(to, toMember.encPk);
+  output(change, me.encPk);
 }
 
 // 償還: 償還額は公開（発行残高の管理のため）、誰が償還したかは公開しない
-export circuit redeem(input: Note): [] {
-  const me = accountId(localSecretKey());
-  assert(input.owner == me, "自分のノートではありません");
+export circuit redeem(input: Note, me: Member): [] {
+  assert(me.id == accountId(localSecretKey()), "自分の口座ではありません");
+  assert(input.owner == me.id, "自分のノートではありません");
   assertMember(me);
   spend(input);
   totalSupply = (totalSupply - disclose(input.value)) as Uint<64>;

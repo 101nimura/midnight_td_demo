@@ -8,64 +8,64 @@
     "type": "directory",
     "contract-info.json": {
       "type": "file",
-      "size": 15077,
-      "hash": "dcadfc9973a696ea76e89585094440d67e85eff3e701b8ebaac8f4f66f58d831"
+      "size": 21703,
+      "hash": "58fdbf504b836c735883c9d60353a7b4e537ae53497c1ad4ef12cb2e0fe2ed7b"
     }
   },
   "contract": {
     "type": "directory",
     "index.d.ts": {
       "type": "file",
-      "size": 6630,
-      "hash": "011102a16df1cc6002238b0783d35d1b393def84884e67fc301f5fdaf43c2110"
+      "size": 8800,
+      "hash": "aaff179868344232a8f9b23ea3db92b2b80b8e88222946304d3090b5aca8d51f"
     },
     "index.js": {
       "type": "file",
-      "size": 122241,
-      "hash": "f31850cab1cbb35634ea94e13567ee2091b5aabf51e67560b38acefa54dd5239"
+      "size": 160600,
+      "hash": "bc0d1a1cfa7c0dad5591ed6d48f8b58d353715447e2a21e8650815ec237593bf"
     },
     "index.js.map": {
       "type": "file",
-      "size": 4805,
-      "hash": "33c2df07f11ba835805c4c07229708468e8077bb1c5960c953b167a67b1cb8aa"
+      "size": 7081,
+      "hash": "f81b0e210afebfa77cd205a246ce3d2e27f76a8c709b57a287b8e17148107485"
     }
   },
   "zkir": {
     "type": "directory",
     "forceRedeem.zkir": {
       "type": "file",
-      "size": 11972,
-      "hash": "0285385f0a3d5531a5d3b52ae7dd1e01833b95a851d2e0095fd4ce1e0a535b81"
+      "size": 12366,
+      "hash": "24145148e8fe8adafab527dd8a7a8cc2d9066ad80ce4267bcf290fbc7ac198a2"
     },
     "forceTransfer.zkir": {
       "type": "file",
-      "size": 24078,
-      "hash": "b496d1f8f855de5861fc9785d2bc2d7ee178b4cee6ab1a88208c2f626f80a2b6"
+      "size": 32886,
+      "hash": "80d3c439a8d529faeae3b1d3a0776b6fa36b98381f8879023e9f39ad91d1fc82"
     },
     "freezeAccount.zkir": {
       "type": "file",
       "size": 4262,
-      "hash": "0c0dcd46c88f5f71e7b0de390f33833fe2207cc6c337d7b70f59550963396c24"
+      "hash": "6379100ded69c02d6ad9dc42a327abcfe8d33bc9050337e6613898e7cf8f83ff"
     },
     "issue.zkir": {
       "type": "file",
-      "size": 11970,
-      "hash": "0a17926cd5030c52db6c6e60756193eebc8e4b655e1936e11100b60ac033c12b"
+      "size": 16742,
+      "hash": "6d041bc0ff8e1d3245d1ca1a69404aa350e885ac3722c93974ffc10cabebe594"
     },
     "redeem.zkir": {
       "type": "file",
-      "size": 18829,
-      "hash": "d4b65d1f116769cb4eba537721fc557982054889c7df40a3252339fac6de3f98"
+      "size": 20706,
+      "hash": "874637e576446975f751e5dd6ab9097faaf6b9cecf455c394ce349e17b99c029"
     },
     "registerAccount.zkir": {
       "type": "file",
-      "size": 3912,
-      "hash": "866043c5b6a4aab9a6682db230bf49897283e5f27aabc4d3a7e7584db010de9e"
+      "size": 3924,
+      "hash": "b9809269f8664599eb46d0ee8a0bc64a39c4537e2e364f62952efe386e938a86"
     },
     "transfer.zkir": {
       "type": "file",
-      "size": 30974,
-      "hash": "bf3d86c6b2f1242a07da3fcc373871e3d3557143ac1c3b99647d606a6472eced"
+      "size": 41197,
+      "hash": "84997d837485d1cccb23a534af0a43946944a5352b9ad36242fe33c366e8761e"
     }
   }
 }

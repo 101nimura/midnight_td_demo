@@ -23,6 +23,46 @@
       }
     },
     {
+      "name": "memberLeaf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "m",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "noteCommitment",
       "pure": true,
       "proof": false,
@@ -50,8 +90,7 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
@@ -91,8 +130,7 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
@@ -105,12 +143,81 @@
       }
     },
     {
+      "name": "ownerTag",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "id",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Field"
+      }
+    },
+    {
+      "name": "encPkOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "s",
+          "type": {
+            "type-name": "JubjubScalar"
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "JubjubPoint"
+      }
+    },
+    {
+      "name": "decrypt",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "s",
+          "type": {
+            "type-name": "JubjubScalar"
+          }
+        },
+        {
+          "name": "epk",
+          "type": {
+            "type-name": "JubjubPoint"
+          }
+        },
+        {
+          "name": "c",
+          "type": {
+            "type-name": "Vector",
+            "length": 3,
+            "type": {
+              "type-name": "Field"
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Vector",
+        "length": 3,
+        "type": {
+          "type-name": "Field"
+        }
+      }
+    },
+    {
       "name": "registerAccount",
       "pure": false,
       "proof": true,
       "arguments": [
         {
-          "name": "id",
+          "name": "leaf",
           "type": {
             "type-name": "Bytes",
             "length": 32
@@ -177,6 +284,34 @@
               {
                 "name": "rand",
                 "type": {
+                  "type-name": "Field"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "m",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
+                "type": {
                   "type-name": "Bytes",
                   "length": 32
                 }
@@ -219,8 +354,7 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
@@ -248,6 +382,34 @@
               },
               {
                 "name": "rand",
+                "type": {
+                  "type-name": "Field"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "toMember",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
                 "type": {
                   "type-name": "Bytes",
                   "length": 32
@@ -279,11 +441,16 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
+          }
+        },
+        {
+          "name": "changePk",
+          "type": {
+            "type-name": "JubjubPoint"
           }
         }
       ],
@@ -321,8 +488,7 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
@@ -363,6 +529,34 @@
               {
                 "name": "rand",
                 "type": {
+                  "type-name": "Field"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "me",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
+                "type": {
                   "type-name": "Bytes",
                   "length": 32
                 }
@@ -392,6 +586,34 @@
               },
               {
                 "name": "rand",
+                "type": {
+                  "type-name": "Field"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "toMember",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
                 "type": {
                   "type-name": "Bytes",
                   "length": 32
@@ -423,8 +645,7 @@
               {
                 "name": "rand",
                 "type": {
-                  "type-name": "Bytes",
-                  "length": 32
+                  "type-name": "Field"
                 }
               }
             ]
@@ -465,6 +686,34 @@
               {
                 "name": "rand",
                 "type": {
+                  "type-name": "Field"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "me",
+          "type": {
+            "type-name": "Struct",
+            "name": "Member",
+            "elements": [
+              {
+                "name": "id",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              },
+              {
+                "name": "encPk",
+                "type": {
+                  "type-name": "JubjubPoint"
+                }
+              },
+              {
+                "name": "salt",
+                "type": {
                   "type-name": "Bytes",
                   "length": 32
                 }
@@ -494,7 +743,7 @@
       "name": "memberPath",
       "arguments": [
         {
-          "name": "id",
+          "name": "leaf",
           "type": {
             "type-name": "Bytes",
             "length": 32
@@ -607,6 +856,14 @@
           }
         ]
       }
+    },
+    {
+      "name": "ephemeralKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "JubjubScalar"
+      }
     }
   ],
   "contracts": [
@@ -623,18 +880,16 @@
       }
     },
     {
-      "name": "members",
+      "name": "bankEncPk",
       "index": 1,
       "exported": true,
-      "storage": "HistoricMerkleTree",
-      "depth": 10,
+      "storage": "Cell",
       "type": {
-        "type-name": "Bytes",
-        "length": 32
+        "type-name": "JubjubPoint"
       }
     },
     {
-      "name": "notes",
+      "name": "members",
       "index": 2,
       "exported": true,
       "storage": "HistoricMerkleTree",
@@ -645,8 +900,61 @@
       }
     },
     {
-      "name": "nullifiers",
+      "name": "notes",
       "index": 3,
+      "exported": true,
+      "storage": "HistoricMerkleTree",
+      "depth": 10,
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "ciphers",
+      "index": 4,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "NoteCipher",
+        "elements": [
+          {
+            "name": "epk",
+            "type": {
+              "type-name": "JubjubPoint"
+            }
+          },
+          {
+            "name": "toOwner",
+            "type": {
+              "type-name": "Vector",
+              "length": 3,
+              "type": {
+                "type-name": "Field"
+              }
+            }
+          },
+          {
+            "name": "toBank",
+            "type": {
+              "type-name": "Vector",
+              "length": 3,
+              "type": {
+                "type-name": "Field"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "nullifiers",
+      "index": 5,
       "exported": true,
       "storage": "Set",
       "type": {
@@ -656,7 +964,7 @@
     },
     {
       "name": "totalSupply",
-      "index": 4,
+      "index": 6,
       "exported": true,
       "storage": "Cell",
       "type": {
